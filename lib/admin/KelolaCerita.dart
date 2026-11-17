@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class KelolaCeritaPage extends StatefulWidget {
   const KelolaCeritaPage({super.key});
@@ -15,8 +16,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
   String kategoriAktif = 'Semua';
   String pencarian = '';
 
-  final TextEditingController searchController =
-      TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
   final List<String> kategori = [
     'Semua',
@@ -88,8 +88,8 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
 
   List<Map<String, dynamic>> get ceritaTerfilter {
     return daftarCerita.where((cerita) {
-      final cocokKategori = kategoriAktif == 'Semua' ||
-          cerita['kategori'] == kategoriAktif;
+      final cocokKategori =
+          kategoriAktif == 'Semua' || cerita['kategori'] == kategoriAktif;
 
       final cocokPencarian = cerita['judul']
           .toString()
@@ -157,13 +157,10 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                       // DAFTAR CERITA
                       GridView.builder(
                         shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: ceritaTerfilter.length,
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount:
-                              constraints.maxWidth < 650 ? 1 : 2,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: constraints.maxWidth < 650 ? 1 : 2,
                           crossAxisSpacing: 18,
                           mainAxisSpacing: 12,
                           mainAxisExtent: 94,
@@ -447,9 +444,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      item == 'Semua'
-                          ? 'S'
-                          : item[0],
+                      item == 'Semua' ? 'S' : item[0],
                       style: TextStyle(
                         color: biru,
                         fontSize: 19,
@@ -463,8 +458,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight:
-                          aktif ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: aktif ? FontWeight.bold : FontWeight.w500,
                       color: biru,
                     ),
                   ),
@@ -600,16 +594,12 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                       () => tampilkanFormCerita(cerita: cerita),
                     ),
                     tombolAksi(
-                      cerita['status'] == 'Terbit'
-                          ? 'Tarik'
-                          : 'Terbit',
+                      cerita['status'] == 'Terbit' ? 'Tarik' : 'Terbit',
                       const Color(0xFF2FA66A),
                       () {
                         setState(() {
                           cerita['status'] =
-                              cerita['status'] == 'Terbit'
-                                  ? 'Draf'
-                                  : 'Terbit';
+                              cerita['status'] == 'Terbit' ? 'Draf' : 'Terbit';
                         });
                       },
                     ),
