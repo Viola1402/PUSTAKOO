@@ -56,7 +56,8 @@ class _KuisBukuState extends State<KuisBuku> {
     try {
       final data = await _supabase
           .from('pertanyaan')
-          .select('isi_pertanyaan, jawaban_benar, jawaban_salah_1, jawaban_salah_2')
+          .select(
+              'isi_pertanyaan, jawaban_benar, jawaban_salah_1, jawaban_salah_2')
           .eq('kuis_id', widget.kuisId)
           .order('id');
 
@@ -159,7 +160,8 @@ class _KuisBukuState extends State<KuisBuku> {
               const SizedBox(height: 8),
               Text(
                 s.pertanyaan,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
               for (var i = 0; i < s.pilihan.length; i++)
@@ -169,7 +171,8 @@ class _KuisBukuState extends State<KuisBuku> {
                   child: ListTile(
                     onTap: () => _pilih(i),
                     leading: CircleAvatar(child: Text(huruf[i])),
-                    title: Text(s.pilihan[i], style: const TextStyle(fontSize: 18)),
+                    title: Text(s.pilihan[i],
+                        style: const TextStyle(fontSize: 18)),
                   ),
                 ),
             ],
@@ -214,7 +217,8 @@ class _KuisBukuState extends State<KuisBuku> {
                 style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 8),
             Text('Nilai: $bulat',
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             if (_gagalSimpan) ...[
               const SizedBox(height: 12),
               Text(
@@ -223,7 +227,8 @@ class _KuisBukuState extends State<KuisBuku> {
               ),
             ],
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: _ulangi, child: const Text('Ulangi Kuis')),
+            ElevatedButton(
+                onPressed: _ulangi, child: const Text('Ulangi Kuis')),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => Navigator.pop(context),
