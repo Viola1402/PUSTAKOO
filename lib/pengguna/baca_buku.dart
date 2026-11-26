@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'kuis_buku.dart';
+import 'tema_pustakoo.dart';
 
+/// Layar Baca Cerita (Figma: 07-baca-cerita dan 07b-halaman-terakhir).
 class BacaBuku extends StatefulWidget {
   final int anakId;
   final int bukuId;
   final String judul;
 
+  // CONSTRUCTOR dengan parameter bernama.
   const BacaBuku({
     super.key,
     required this.anakId,
@@ -20,6 +23,8 @@ class BacaBuku extends StatefulWidget {
 }
 
 class _BacaBukuState extends State<BacaBuku> {
+  // ENKAPSULASI: semua data layar disimpan private (diawali _),
+  // hanya diubah lewat method di kelas ini.
   final _supabase = Supabase.instance.client;
 
   bool _memuat = true;
@@ -69,7 +74,7 @@ class _BacaBukuState extends State<BacaBuku> {
       if (progres.isNotEmpty) {
         selesai = progres.first['status'] == 'selesai';
         final terakhir = progres.first['halaman_terakhir'] as int;
-        // Lanjut dari halaman terakhir, kecuali bukunya sudah selesai
+        // Lanjut dari halaman terakhir, kecuali buku sudah selesai
         // (baca ulang dari awal).
         if (!selesai) {
           final i = daftar.indexWhere((h) => h['nomor_halaman'] == terakhir);
@@ -96,7 +101,7 @@ class _BacaBukuState extends State<BacaBuku> {
 
   bool get _halamanTerakhir => _indeks == _halaman.length - 1;
 
-  /// Menyimpan progres. Galat sengaja tidak ditampilkan ke anak,
+  /// Menyimpan progres. Galat tidak ditampilkan ke anak,
   /// tapi dicetak ke konsol supaya mudah dicek saat pengembangan.
   Future<void> _simpanProgres() async {
     if (_halaman.isEmpty) return;
@@ -156,19 +161,104 @@ class _BacaBukuState extends State<BacaBuku> {
     );
   }
 
-  Widget _ilustrasi(String? url) {
-    if (url == null || url.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          url,
-          height: 220,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+  // Titik penanda halaman di bawah judul.
+  Widget _penandaHalaman() {
+    if (_halaman.length > 12) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: (_indeks + 1) / _halaman.length,
+            minHeight: 6,
+            backgroundColor: Warna.biruTitik,
+            color: Warna.emas,
+          ),
         ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < _halaman.length; i++)
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: i == _indeks ? Warna.emas : Warna.biruTitik,
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Kotak ilustrasi: pakai gambar kalau ada, kalau tidak pakai huruf awal judul.
+  Widget _ilustrasi(String? url) {
+    final huruf = widget.judul.isNotEmpty ? widget.judul[0].toUpperCase() : '?';
+
+    final penampung = LayoutBuilder(
+      builder: (context, kotak) {
+        final sisi = (kotak.maxWidth < kotak.maxHeight ? kotak.maxWidth : kotak.maxHeight) * 0.62;
+        return Center(
+          child: Container(
+            width: sisi,
+            height: sisi,
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: Center(
+              child: Container(
+                width: sisi * 0.74,
+                height: sisi * 0.74,
+                decoration: const BoxDecoration(
+                  color: Warna.hijauMuda,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(huruf, style: gaya(sisi * 0.42)),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Warna.hijauMuda,
+        borderRadius: BorderRadius.circular(22),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: (url == null || url.isEmpty)
+          ? penampung
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => penampung,
+            ),
+    );
+  }
+
+  Widget _tombolKanan() {
+    if (!_halamanTerakhir) {
+      return TombolPustakoo(label: 'Selanjutnya', onTap: () => _pindah(1));
+    }
+    if (_kuis != null) {
+      return TombolPustakoo(
+        label: 'Mulai Kuis',
+        onTap: _mulaiKuis,
+        warna: Warna.hijau,
+        warnaTeks: Colors.white,
+      );
+    }
+    return TombolPustakoo(
+      label: 'Selesai',
+      onTap: () => Navigator.pop(context),
+      warna: Warna.hijau,
+      warnaTeks: Colors.white,
     );
   }
 
@@ -176,95 +266,92 @@ class _BacaBukuState extends State<BacaBuku> {
     if (_memuat) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Gagal memuat buku.', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 8),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: _muat, child: const Text('Coba lagi')),
-            ],
-          ),
-        ),
-      );
+      return KotakGalat(judul: 'Gagal memuat buku.', pesan: _error!, onUlang: _muat);
     }
 
     if (_halaman.isEmpty) {
-      return const Center(child: Text('Buku ini belum punya halaman.'));
+      return Column(
+        children: [
+          _kepala(),
+          const Expanded(child: Center(child: Text('Buku ini belum punya halaman.'))),
+        ],
+      );
     }
 
     final h = _halaman[_indeks];
 
-    return Column(
-      children: [
-        LinearProgressIndicator(value: (_indeks + 1) / _halaman.length),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ilustrasi(h['ilustrasi'] as String?),
-                Text(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+      child: Column(
+        children: [
+          _kepala(),
+          _penandaHalaman(),
+          const SizedBox(height: 12),
+          Expanded(flex: 5, child: _ilustrasi(h['ilustrasi'] as String?)),
+          const SizedBox(height: 12),
+          Expanded(
+            flex: 4,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Warna.krem,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: SingleChildScrollView(
+                child: Text(
                   h['isi_halaman'] as String,
-                  style: const TextStyle(fontSize: 22, height: 1.6),
+                  style: gaya(20, warna: Warna.teksCerita, tinggi: 1.35),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _indeks == 0 ? null : () => _pindah(-1),
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Kembali'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TombolPustakoo(
+                  label: 'Sebelumnya',
+                  onTap: _indeks == 0 ? null : () => _pindah(-1),
                 ),
-                Expanded(
-                  child: Text(
-                    '${_indeks + 1} / ${_halaman.length}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                if (!_halamanTerakhir)
-                  ElevatedButton.icon(
-                    onPressed: () => _pindah(1),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Lanjut'),
-                  )
-                else if (_kuis != null)
-                  ElevatedButton.icon(
-                    onPressed: _mulaiKuis,
-                    icon: const Icon(Icons.quiz),
-                    label: const Text('Mulai Kuis'),
-                  )
-                else
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Selesai'),
-                  ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: _tombolKanan()),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _kepala() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: SizedBox(
+        height: 48,
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, color: Warna.biruTua),
+            ),
+            Expanded(
+              child: Text(
+                widget.judul,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: gaya(16),
+              ),
+            ),
+            const SizedBox(width: 48),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.judul)),
-      body: _isi(),
-    );
+    return KerangkaSeluler(child: _isi());
   }
 }
