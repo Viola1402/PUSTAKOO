@@ -48,15 +48,11 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     });
 
     try {
-      final hasilCerita = await supabase
-          .from('buku')
-          .select('*')
-          .order('id', ascending: false);
+      final hasilCerita =
+          await supabase.from('buku').select('*').order('id', ascending: false);
 
-      final hasilKategori = await supabase
-          .from('kategori')
-          .select('id, nama')
-          .order('nama');
+      final hasilKategori =
+          await supabase.from('kategori').select('id, nama').order('nama');
 
       if (!mounted) return;
 
@@ -142,9 +138,11 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
   int jumlahKategori(String nama) {
     if (nama == 'Semua') return cerita.length;
 
-    return cerita.where(
-      (item) => namaKategori(item['kategori_id']) == nama,
-    ).length;
+    return cerita
+        .where(
+          (item) => namaKategori(item['kategori_id']) == nama,
+        )
+        .length;
   }
 
   void tampilkanPesan(String pesan) {
@@ -184,11 +182,9 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
       text: item?['harga_poin']?.toString() ?? '0',
     );
 
-    int? kategoriId =
-        item == null ? null : angka(item['kategori_id']);
+    int? kategoriId = item == null ? null : angka(item['kategori_id']);
 
-    String tingkatMembaca =
-        item?['tingkat_membaca']?.toString() ?? 'Pemula';
+    String tingkatMembaca = item?['tingkat_membaca']?.toString() ?? 'Pemula';
 
     String status = item?['status']?.toString() ?? 'draf';
 
@@ -209,13 +205,17 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
 
     Future<void> pilihBerkas(StateSetter aturDialog) async {
       try {
-        final berkas = await FilePicker.pickFile(type: FileType.image);
+        final hasil = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          withData: true,
+        );
 
-        if (berkas == null) return;
+        if (hasil == null || hasil.files.isEmpty) return;
 
-        final bytes = await berkas.readAsBytes();
+        final berkas = hasil.files.first;
+        final bytes = berkas.bytes;
 
-        if (bytes.isEmpty) {
+        if (bytes == null || bytes.isEmpty) {
           tampilkanPesan('Berkas gambar tidak bisa dibaca.');
           return;
         }
@@ -275,7 +275,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                         ),
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Deskripsi'),
                       TextField(
                         controller: deskripsiController,
@@ -285,7 +284,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                         ),
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Kategori'),
                       DropdownButtonFormField<int>(
                         value: kategoriId,
@@ -306,7 +304,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                               },
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Tingkat Membaca'),
                       DropdownButtonFormField<String>(
                         value: tingkatMembaca,
@@ -338,7 +335,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                               },
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Gambar Sampul'),
                       Wrap(
                         spacing: 8,
@@ -407,7 +403,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Harga Poin'),
                       TextField(
                         controller: hargaController,
@@ -417,7 +412,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                         ),
                       ),
                       const SizedBox(height: 14),
-
                       _labelForm('Status Cerita'),
                       DropdownButtonFormField<String>(
                         value: status,
@@ -450,9 +444,8 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: menyimpan
-                      ? null
-                      : () => Navigator.pop(dialogContext),
+                  onPressed:
+                      menyimpan ? null : () => Navigator.pop(dialogContext),
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
@@ -464,16 +457,14 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                       ? null
                       : () async {
                           final judul = judulController.text.trim();
-                          final deskripsi =
-                              deskripsiController.text.trim();
+                          final deskripsi = deskripsiController.text.trim();
                           final gambarUrl = gambarController.text.trim();
-                          final gambar =
-                              pakaiUnggahan && bytesSampul != null
-                                  ? dataUriGambar(
-                                      bytesSampul!,
-                                      namaSampul ?? 'sampul.jpg',
-                                    )
-                                  : gambarUrl;
+                          final gambar = pakaiUnggahan && bytesSampul != null
+                              ? dataUriGambar(
+                                  bytesSampul!,
+                                  namaSampul ?? 'sampul.jpg',
+                                )
+                              : gambarUrl;
                           final harga =
                               int.tryParse(hargaController.text.trim());
 
@@ -503,8 +494,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                             'deskripsi': deskripsi,
                             'kategori_id': kategoriId,
                             'tingkat_membaca': tingkatMembaca,
-                            'gambar_sampul':
-                                gambar.isEmpty ? null : gambar,
+                            'gambar_sampul': gambar.isEmpty ? null : gambar,
                             'harga_poin': harga,
                             'status': status,
                           };
@@ -516,9 +506,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                                   .update(data)
                                   .eq('id', item['id']);
                             } else {
-                              await supabase
-                                  .from('buku')
-                                  .insert(data);
+                              await supabase.from('buku').insert(data);
                             }
 
                             if (!mounted) return;
@@ -625,9 +613,8 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: namaBerkas == null
-                        ? const Color(0xFF94A3B8)
-                        : biruTua,
+                    color:
+                        namaBerkas == null ? const Color(0xFF94A3B8) : biruTua,
                   ),
                 ),
               ),
@@ -705,22 +692,18 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
   Future<void> ubahStatus(Map<String, dynamic> item) async {
     final statusSekarang = item['status']?.toString().toLowerCase();
 
-    if (statusSekarang != 'draf' &&
-        statusSekarang != 'diterbitkan') {
+    if (statusSekarang != 'draf' && statusSekarang != 'diterbitkan') {
       tampilkanPesan('Status cerita tidak dikenali.');
       return;
     }
 
-    final statusBaru =
-        statusSekarang == 'draf' ? 'diterbitkan' : 'draf';
+    final statusBaru = statusSekarang == 'draf' ? 'diterbitkan' : 'draf';
 
     final konfirmasi = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          statusBaru == 'diterbitkan'
-              ? 'Terbitkan Cerita'
-              : 'Tarik Cerita',
+          statusBaru == 'diterbitkan' ? 'Terbitkan Cerita' : 'Tarik Cerita',
         ),
         content: Text(
           statusBaru == 'diterbitkan'
@@ -745,8 +728,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     try {
       await supabase
           .from('buku')
-          .update({'status': statusBaru})
-          .eq('id', item['id']);
+          .update({'status': statusBaru}).eq('id', item['id']);
 
       await muatCerita();
 
@@ -788,10 +770,7 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     if (konfirmasi != true) return;
 
     try {
-      await supabase
-          .from('buku')
-          .delete()
-          .eq('id', item['id']);
+      await supabase.from('buku').delete().eq('id', item['id']);
 
       await muatCerita();
 
@@ -1300,9 +1279,8 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
             status == 'Diterbitkan' ? 'Tarik' : 'Terbitkan',
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: status == 'Diterbitkan'
-                ? const Color(0xFFFFF1DF)
-                : biru,
+            backgroundColor:
+                status == 'Diterbitkan' ? const Color(0xFFFFF1DF) : biru,
             foregroundColor: status == 'Diterbitkan'
                 ? const Color(0xFFB7791F)
                 : Colors.white,

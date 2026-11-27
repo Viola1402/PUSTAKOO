@@ -190,8 +190,8 @@ class AdminShell extends StatelessWidget {
               children: [
                 Flexible(
                   child: Container(
-                    height: 40,
-                    constraints: const BoxConstraints(maxWidth: 360),
+                    height: 44,
+                    constraints: const BoxConstraints(maxWidth: 380),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: GayaAdmin.latar,
@@ -222,7 +222,7 @@ class AdminShell extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  height: 40,
+                  height: 44,
                   child: ElevatedButton(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -251,17 +251,36 @@ class AdminShell extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          IconButton(
-            tooltip: 'Notifikasi',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Belum ada notifikasi baru.')),
-              );
-            },
-            icon: const Icon(
-              Icons.notifications_none,
-              color: GayaAdmin.teks,
-            ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: 'Notifikasi',
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Belum ada notifikasi baru.'),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.notifications_none,
+                  color: GayaAdmin.teks,
+                ),
+              ),
+              Positioned(
+                right: 9,
+                top: 8,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: GayaAdmin.merah,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 4),
           if (desktop) ...[
@@ -330,7 +349,7 @@ class AdminShell extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: GayaAdmin.biruTua,
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.6,
               ),
@@ -394,7 +413,7 @@ class AdminShell extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
       child: Material(
-        color: aktif ? const Color(0xFFDCE9F7) : Colors.transparent,
+        color: aktif ? GayaAdmin.biru : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -409,14 +428,14 @@ class AdminShell extends StatelessWidget {
                 Icon(
                   icon,
                   size: 17,
-                  color: aktif ? GayaAdmin.biru : GayaAdmin.biruTua,
+                  color: aktif ? Colors.white : GayaAdmin.teks,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     judul,
                     style: TextStyle(
-                      color: aktif ? GayaAdmin.biru : GayaAdmin.biruTua,
+                      color: aktif ? Colors.white : GayaAdmin.teks,
                       fontSize: 11.5,
                       fontWeight:
                           aktif ? FontWeight.bold : FontWeight.w600,
