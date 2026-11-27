@@ -1,7 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../autentikasi/login.dart';
+import 'admin_shell.dart';
 
 class DashboardAdmin extends StatefulWidget {
   const DashboardAdmin({super.key});
@@ -13,8 +14,6 @@ class DashboardAdmin extends StatefulWidget {
 class _DashboardAdminState extends State<DashboardAdmin> {
   final supabase = Supabase.instance.client;
 
-  final Color biru = const Color(0xFF286795);
-  final Color latar = const Color(0xFFF7F8FC);
   final Color krem = const Color(0xFFF2EBD9);
 
   int totalPengguna = 0;
@@ -52,18 +51,18 @@ class _DashboardAdminState extends State<DashboardAdmin> {
       final awalPekan = sekarang.subtract(const Duration(days: 7));
       final batasWaktu = awalPekan.toIso8601String();
 
-      // STATISTIK UTAMA
       final hasilPengguna =
           await supabase.from('pengguna').count(CountOption.exact);
 
-      final hasilAnak = await supabase.from('anak').count(CountOption.exact);
+      final hasilAnak =
+          await supabase.from('anak').count(CountOption.exact);
 
-      final hasilBuku = await supabase.from('buku').count(CountOption.exact);
+      final hasilBuku =
+          await supabase.from('buku').count(CountOption.exact);
 
       final hasilKuis =
           await supabase.from('riwayat_kuis').count(CountOption.exact);
 
-      // DATA KUIS PEKAN INI
       final dataKuis = await supabase
           .from('riwayat_kuis')
           .select('id, nilai, waktu_selesai, anak_id, kuis_id')
@@ -76,9 +75,9 @@ class _DashboardAdminState extends State<DashboardAdmin> {
         jumlahNilai += (item['nilai'] as num?)?.toDouble() ?? 0;
       }
 
-      final rataNilai = dataKuis.isEmpty ? 0.0 : jumlahNilai / dataKuis.length;
+      final rataNilai =
+          dataKuis.isEmpty ? 0.0 : jumlahNilai / dataKuis.length;
 
-      // DATA MISI PEKAN INI
       final dataMisi = await supabase
           .from('progres_misi')
           .select('id, status, waktu_selesai');
@@ -88,9 +87,9 @@ class _DashboardAdminState extends State<DashboardAdmin> {
       final misiSelesai =
           dataMisi.where((item) => item['status'] == 'selesai').length;
 
-      final persenMisi = totalMisi == 0 ? 0.0 : (misiSelesai / totalMisi) * 100;
+      final persenMisi =
+          totalMisi == 0 ? 0.0 : (misiSelesai / totalMisi) * 100;
 
-      // CERITA POPULER PEKAN INI
       final dataProgres = await supabase
           .from('progres_membaca')
           .select('buku_id')
@@ -106,7 +105,8 @@ class _DashboardAdminState extends State<DashboardAdmin> {
       final dataBuku =
           await supabase.from('buku').select('id, judul, kategori_id');
 
-      final dataKategori = await supabase.from('kategori').select('id, nama');
+      final dataKategori =
+          await supabase.from('kategori').select('id, nama');
 
       final Map<int, String> namaKategori = {};
 
@@ -142,10 +142,8 @@ class _DashboardAdminState extends State<DashboardAdmin> {
           ? 'Belum ada data'
           : populer.first['judul'].toString();
 
-      // AKTIVITAS TERBARU
       final List<Map<String, dynamic>> daftarAktivitas = [];
 
-      // Pengguna baru
       final penggunaBaru = await supabase
           .from('pengguna')
           .select('nama, tanggal_dibuat')
@@ -160,7 +158,6 @@ class _DashboardAdminState extends State<DashboardAdmin> {
         });
       }
 
-      // Riwayat kuis
       final kuisTerbaru = await supabase
           .from('riwayat_kuis')
           .select('id, waktu_selesai, nilai')
@@ -176,7 +173,6 @@ class _DashboardAdminState extends State<DashboardAdmin> {
         });
       }
 
-      // Transaksi poin
       final transaksiTerbaru = await supabase
           .from('transaksi_poin')
           .select('jumlah_poin, jenis, keterangan, tanggal_transaksi')
@@ -193,7 +189,6 @@ class _DashboardAdminState extends State<DashboardAdmin> {
         });
       }
 
-      // Misi selesai
       final misiTerbaru = await supabase
           .from('progres_misi')
           .select('id, status, waktu_selesai')
@@ -210,13 +205,11 @@ class _DashboardAdminState extends State<DashboardAdmin> {
       }
 
       daftarAktivitas.sort((a, b) {
-        final waktuA = DateTime.tryParse(
-          a['waktu']?.toString() ?? '',
-        );
+        final waktuA =
+            DateTime.tryParse(a['waktu']?.toString() ?? '');
 
-        final waktuB = DateTime.tryParse(
-          b['waktu']?.toString() ?? '',
-        );
+        final waktuB =
+            DateTime.tryParse(b['waktu']?.toString() ?? '');
 
         if (waktuA == null) return 1;
         if (waktuB == null) return -1;
@@ -281,254 +274,14 @@ class _DashboardAdminState extends State<DashboardAdmin> {
     return '${tanggal.day}/${tanggal.month}/${tanggal.year}';
   }
 
-  Future<void> logout(BuildContext context) async {
-    await supabase.auth.signOut();
-
-    if (!context.mounted) return;
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
-  }
-
-  void pesan(BuildContext context, String menu) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$menu akan segera dihubungkan.'),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, ukuran) {
-        final desktop = ukuran.maxWidth > 800;
-
-        return Scaffold(
-          backgroundColor: latar,
-          drawer: desktop
-              ? null
-              : Drawer(
-                  child: _sidebar(context),
-                ),
-          appBar: AppBar(
-            automaticallyImplyLeading: !desktop,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            title: Row(
-              children: [
-                if (desktop) ...[
-                  Image.asset(
-                    'assets/images/piko.png',
-                    width: 45,
-                    height: 45,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pustakoo',
-                    style: TextStyle(
-                      color: biru,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Icon(Icons.menu_book, color: biru),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pustakoo',
-                    style: TextStyle(
-                      color: biru,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                ],
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    constraints: const BoxConstraints(
-                      maxWidth: 350,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: latar,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Cari cerita, pengguna, kuis...',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                onPressed: () => pesan(context, 'Notifikasi'),
-                icon: const Icon(
-                  Icons.notifications_none,
-                  color: Colors.black87,
-                ),
-              ),
-              if (desktop)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Color(0xFF286795),
-                        backgroundImage: AssetImage('assets/images/piko.png'),
-                      ),
-                      SizedBox(width: 8),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Admin Pustakoo',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            'Super Admin',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(width: 12),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          body: Row(
-            children: [
-              if (desktop)
-                SizedBox(
-                  width: 220,
-                  child: _sidebar(context),
-                ),
-              Expanded(
-                child: _konten(context, ukuran.maxWidth),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _sidebar(BuildContext context) {
-    return Container(
-      color: const Color(0xFFF0F3FC),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          const ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Color(0xFF286795),
-              backgroundImage: AssetImage('assets/images/piko.png'),
-            ),
-            title: Text(
-              'Pustakoo',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF173F70),
-                fontSize: 19,
-              ),
-            ),
-            subtitle: Text('Admin'),
-          ),
-          const SizedBox(height: 20),
-          _menu(context, Icons.dashboard, 'Dashboard', true),
-          _menu(context, Icons.menu_book, 'Kelola Cerita'),
-          _menu(context, Icons.category, 'Kelola Kategori'),
-          _menu(context, Icons.quiz, 'Kelola Kuis'),
-          _menu(context, Icons.stars, 'Kelola Misi & Poin'),
-          _menu(context, Icons.people, 'Kelola Pengguna'),
-          _menu(context, Icons.bar_chart, 'Laporan'),
-          const Spacer(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
-              'Keluar',
-              style: TextStyle(color: Colors.red),
-            ),
-            onTap: () => logout(context),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _menu(
-    BuildContext context,
-    IconData icon,
-    String judul, [
-    bool aktif = false,
-  ]) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 3,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: aktif ? biru : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ListTile(
-          selected: aktif,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          leading: Icon(
-            icon,
-            color: aktif ? Colors.white : const Color(0xFF173F70),
-          ),
-          title: Text(
-            judul,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: aktif ? Colors.white : const Color(0xFF173F70),
-            ),
-          ),
-          onTap: () {
-            if (judul != 'Dashboard') {
-              if (MediaQuery.of(context).size.width <= 800) {
-                Navigator.pop(context);
-              }
-              pesan(context, judul);
-            }
-          },
-        ),
+    return AdminShell(
+      aktif: 'Dashboard',
+      child: LayoutBuilder(
+        builder: (context, ukuran) {
+          return _konten(context, ukuran.maxWidth);
+        },
       ),
     );
   }
@@ -541,7 +294,7 @@ class _DashboardAdminState extends State<DashboardAdmin> {
             : 1;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
