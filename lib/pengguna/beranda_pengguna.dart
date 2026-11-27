@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../autentikasi/login.dart';
+import '../widgets/sampul_cerita.dart';
 import 'baca_buku.dart';
 
 class BerandaOrangTua extends StatefulWidget {
@@ -121,25 +122,12 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
   }
 
   Widget _sampul(String? url) {
-    final kotak = Container(
-      width: 56,
-      height: 72,
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(Icons.menu_book, color: Colors.blue.shade700),
-    );
-    if (url == null || url.isEmpty) return kotak;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        url,
-        width: 56,
-        height: 72,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => kotak,
-      ),
+    return SampulCerita(
+      sumber: url,
+      lebar: 56,
+      tinggi: 72,
+      warnaIkon: Colors.blue.shade700,
+      warnaLatar: Colors.blue.shade50,
     );
   }
 
