@@ -33,8 +33,18 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
 
   static List<Map<String, dynamic>> _contohHargaTukar() {
     return [
-      {'judul': 'Dongeng', 'kategori': 'Petualangan', 'poin': 10, 'aktif': true},
-      {'judul': 'Sains', 'kategori': 'Cerita Rakyat', 'poin': 20, 'aktif': true},
+      {
+        'judul': 'Dongeng',
+        'kategori': 'Petualangan',
+        'poin': 10,
+        'aktif': true
+      },
+      {
+        'judul': 'Sains',
+        'kategori': 'Cerita Rakyat',
+        'poin': 20,
+        'aktif': true
+      },
       {
         'judul': 'Cerita Rakyat',
         'kategori': 'Gratis / 35 Poin',
@@ -380,7 +390,8 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                   onPressed: () {
                     if (judul.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Judul misi harus diisi.')),
+                        const SnackBar(
+                            content: Text('Judul misi harus diisi.')),
                       );
                       return;
                     }
@@ -985,9 +996,8 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                     color: tabMisi == i ? Colors.white : Colors.transparent,
                     borderRadius: BorderRadius.circular(7),
                     border: Border.all(
-                      color: tabMisi == i
-                          ? GayaAdmin.garis
-                          : Colors.transparent,
+                      color:
+                          tabMisi == i ? GayaAdmin.garis : Colors.transparent,
                     ),
                   ),
                   child: Text(
@@ -996,9 +1006,8 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                     style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.bold,
-                      color: tabMisi == i
-                          ? GayaAdmin.biruTua
-                          : GayaAdmin.teksAbu,
+                      color:
+                          tabMisi == i ? GayaAdmin.biruTua : GayaAdmin.teksAbu,
                     ),
                   ),
                 ),

@@ -77,7 +77,7 @@ class _DashboardAdminState extends State<DashboardAdmin> {
 
               const SizedBox(height: 24),
 
-              // Statistik dashboard
+              // Empat kartu statistik sejajar
               _statistik(data, lebar),
 
               const SizedBox(height: 24),
@@ -241,34 +241,34 @@ class _DashboardAdminState extends State<DashboardAdmin> {
   }
 
   // ========================================================
-  // KARTU STATISTIK
+  // EMPAT KARTU STATISTIK SEJAJAR
   // ========================================================
 
   Widget _statistik(DataDashboard data, double lebar) {
     const celah = 16.0;
+    const jumlahKolom = 4;
+    const lebarMinimum = 220.0;
 
-    // Desktop: 4 card sejajar dalam satu baris.
-    final kolom = lebar >= 1100
-        ? 4
-        : lebar >= 600
-            ? 2
-            : 1;
+    final lebarKartu = ((lebar - (celah * 3)) / jumlahKolom)
+        .clamp(lebarMinimum, double.infinity)
+        .toDouble();
 
-    final lebarKartu = (lebar - celah * (kolom - 1)) / kolom;
-
-    return Wrap(
-      spacing: celah,
-      runSpacing: celah,
-      children: [
-        for (final item in data.statistik)
-          SizedBox(
-            width: lebarKartu,
-            height: 160,
-            child: KartuStatistikDashboard(
-              statistik: item,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (int i = 0; i < data.statistik.length; i++) ...[
+            SizedBox(
+              width: lebarKartu,
+              height: 160,
+              child: KartuStatistikDashboard(
+                statistik: data.statistik[i],
+              ),
             ),
-          ),
-      ],
+            if (i < data.statistik.length - 1) const SizedBox(width: celah),
+          ],
+        ],
+      ),
     );
   }
 

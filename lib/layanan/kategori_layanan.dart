@@ -4,18 +4,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../model/kategori_model.dart';
 
 // ==========================================================
-// LAYANAN DATA KELOLA KATEGORI
-// Abstraksi KategoriRepository memungkinkan data diambil dari
-// Supabase, data contoh, atau sumber lain tanpa mengubah
-// halaman maupun widget.
+// REPOSITORY KELOLA KATEGORI
 // ==========================================================
 
 abstract class KategoriRepository {
   Future<DataKategori> muatKategori();
 
-  /// Mengembalikan `true` bila data berhasil disimpan ke basis data.
-  Future<bool> simpanKategori({int? id, required IsianKategori isian});
+  Future<bool> simpanKategori({
+    int? id,
+    required IsianKategori isian,
+  });
+
+  Future<bool> hapusKategori(int id);
 }
+
+// ==========================================================
+// REPOSITORY SUPABASE
+// ==========================================================
 
 class SupabaseKategoriRepository implements KategoriRepository {
   final SupabaseClient _klien;
@@ -31,22 +36,17 @@ class SupabaseKategoriRepository implements KategoriRepository {
           .select('id, nama, deskripsi')
           .order('nama');
 
-      final hasilBuku = await _klien
-          .from('buku')
-          .select('id, kategori_id, tingkat_membaca');
+      final hasilBuku = await _klien.from('buku').select('id, kategori_id');
 
       final buku = List<Map<String, dynamic>>.from(hasilBuku);
 
-      if (hasilKategori.isEmpty) {
-        return contohDataKategori(dimuatPada: DateTime.now());
-      }
-
-      final daftar = hasilKategori.map((item) {
+      final daftar = List<Map<String, dynamic>>.from(hasilKategori).map((item) {
         final id = item['id'];
         final nama = _teks(item['nama'], 'Tanpa Nama');
-        final jumlah = buku
-            .where((row) => row['kategori_id'].toString() == id.toString())
-            .length;
+
+        final jumlah = buku.where((row) {
+          return row['kategori_id']?.toString() == id.toString();
+        }).length;
 
         return KategoriCerita(
           id: _angka(id),
@@ -60,13 +60,16 @@ class SupabaseKategoriRepository implements KategoriRepository {
 
       return DataKategori(
         kategori: daftar,
-        distribusi: _distribusi(buku),
+        distribusi: DistribusiBuku([
+          for (final tingkat in TingkatBaca.values)
+            BagianDistribusi(tingkat: tingkat, jumlah: 0),
+        ]),
         dataContoh: false,
         dimuatPada: DateTime.now(),
       );
     } catch (error) {
       debugPrint('Kategori: gagal memuat data ($error)');
-      return contohDataKategori(dimuatPada: DateTime.now());
+      rethrow;
     }
   }
 
@@ -94,27 +97,32 @@ class SupabaseKategoriRepository implements KategoriRepository {
     }
   }
 
-  DistribusiBuku _distribusi(List<Map<String, dynamic>> buku) {
-    final jumlah = <TingkatBaca, int>{
-      for (final tingkat in TingkatBaca.values) tingkat: 0,
-    };
+  @override
+  Future<bool> hapusKategori(int id) async {
+    try {
+      // Cek apakah kategori masih digunakan oleh buku.
+      final bukuTerkait =
+          await _klien.from('buku').select('id').eq('kategori_id', id).limit(1);
 
-    for (final item in buku) {
-      final tingkat = TingkatBaca.dariTeks(
-        item['tingkat_membaca']?.toString(),
-      );
-      jumlah[tingkat] = (jumlah[tingkat] ?? 0) + 1;
+      if (bukuTerkait.isNotEmpty) {
+        debugPrint('Kategori masih digunakan oleh buku.');
+        return false;
+      }
+
+      await _klien.from('kategori').delete().eq('id', id);
+
+      return true;
+    } catch (error) {
+      debugPrint('Kategori: gagal menghapus ($error)');
+      return false;
     }
-
-    return DistribusiBuku([
-      for (final tingkat in TingkatBaca.values)
-        BagianDistribusi(tingkat: tingkat, jumlah: jumlah[tingkat] ?? 0),
-    ]);
   }
 }
 
-/// Data contoh dipakai saat tabel kategori masih kosong atau
-/// koneksi basis data gagal.
+// ==========================================================
+// REPOSITORY DATA CONTOH
+// ==========================================================
+
 class ContohKategoriRepository implements KategoriRepository {
   const ContohKategoriRepository();
 
@@ -130,7 +138,16 @@ class ContohKategoriRepository implements KategoriRepository {
   }) async {
     return false;
   }
+
+  @override
+  Future<bool> hapusKategori(int id) async {
+    return false;
+  }
 }
+
+// ==========================================================
+// DATA CONTOH
+// ==========================================================
 
 DataKategori contohDataKategori({DateTime? dimuatPada}) {
   const daftar = <KategoriCerita>[
@@ -138,9 +155,7 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
       id: 1,
       nama: 'Dongeng',
       genre: 'Fantasi',
-      deskripsi:
-          'Cerita imajinatif, fabel, dan kisah klasik nusantara untuk '
-          'membangun daya khayal serta kreativitas anak.',
+      deskripsi: 'Cerita imajinatif, fabel, dan kisah klasik nusantara.',
       jumlahCerita: 8,
       jenis: JenisKategori.dongeng,
     ),
@@ -148,9 +163,7 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
       id: 2,
       nama: 'Petualangan',
       genre: 'Eksplorasi',
-      deskripsi:
-          'Eksplorasi alam, misteri ringan, dan kisah ketangguhan karakter '
-          'yang melatih keberanian pembaca muda.',
+      deskripsi: 'Eksplorasi alam, misteri ringan, dan kisah petualangan.',
       jumlahCerita: 12,
       jenis: JenisKategori.petualangan,
     ),
@@ -158,9 +171,7 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
       id: 3,
       nama: 'Hewan',
       genre: 'Fabel Satwa',
-      deskripsi:
-          'Kisah fabel satwa lucu dengan pesan moral, empati, dan budi '
-          'pekerti ramah anak untuk bacaan sehari-hari.',
+      deskripsi: 'Kisah fabel satwa dengan pesan moral untuk anak.',
       jumlahCerita: 10,
       jenis: JenisKategori.hewan,
     ),
@@ -168,9 +179,7 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
       id: 4,
       nama: 'Sains',
       genre: 'Edukasi STEM',
-      deskripsi:
-          'Eksplorasi ilmu alam, eksperimen sederhana, dan pemahaman '
-          'fenomena dunia sekitar yang memicu rasa ingin tahu.',
+      deskripsi: 'Cerita ilmu pengetahuan dan eksperimen sederhana.',
       jumlahCerita: 6,
       jenis: JenisKategori.sains,
     ),
@@ -178,9 +187,7 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
       id: 5,
       nama: 'Cerita Rakyat',
       genre: 'Budaya Lokal',
-      deskripsi:
-          'Dongeng legenda nusantara, kearifan budaya daerah, dan kisah '
-          'keteladanan leluhur dari berbagai penjuru Indonesia.',
+      deskripsi: 'Legenda nusantara dan kisah budaya daerah.',
       jumlahCerita: 14,
       jenis: JenisKategori.ceritaRakyat,
     ),
@@ -201,16 +208,18 @@ DataKategori contohDataKategori({DateTime? dimuatPada}) {
 }
 
 // ==========================================================
-// PEMBANTU KONVERSI NILAI DINAMIS
+// PEMBANTU KONVERSI
 // ==========================================================
 
 String _teks(dynamic nilai, [String nilaiAwal = '-']) {
   if (nilai == null) return nilaiAwal;
+
   final hasil = nilai.toString().trim();
   return hasil.isEmpty ? nilaiAwal : hasil;
 }
 
 int _angka(dynamic nilai) {
   if (nilai is num) return nilai.toInt();
+
   return int.tryParse(nilai?.toString() ?? '') ?? 0;
 }

@@ -6,16 +6,16 @@ import '../widget/kategori_widget.dart';
 import 'admin_shell.dart';
 
 // ==========================================================
-// HALAMAN KELOLA KATEGORI & TINGKAT BACA
-// Halaman hanya merangkai widget dan menangani aksi dialog;
-// pengambilan serta penyimpanan data diserahkan ke
-// KategoriRepository (konsep OOP: pemisahan tanggung jawab).
+// HALAMAN KELOLA KATEGORI
 // ==========================================================
 
 class KelolaKategoriPage extends StatefulWidget {
   final KategoriRepository? repositori;
 
-  const KelolaKategoriPage({super.key, this.repositori});
+  const KelolaKategoriPage({
+    super.key,
+    this.repositori,
+  });
 
   @override
   State<KelolaKategoriPage> createState() => _KelolaKategoriPageState();
@@ -35,6 +35,10 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
     _muat();
   }
 
+  // ========================================================
+  // MEMUAT DATA KATEGORI
+  // ========================================================
+
   Future<void> _muat() async {
     setState(() {
       _memuat = true;
@@ -50,7 +54,9 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
         _data = data;
         _memuat = false;
       });
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Gagal memuat kategori: $error');
+
       if (!mounted) return;
 
       setState(() {
@@ -60,12 +66,18 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
     }
   }
 
+  // ========================================================
+  // TAMPILAN UTAMA
+  // ========================================================
+
   @override
   Widget build(BuildContext context) {
     return AdminShell(
       aktif: 'Kelola Kategori',
       child: _memuat
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : _galat != null
               ? _galatTampilan()
               : _isi(_data!),
@@ -78,35 +90,31 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const RemahAdmin(['Dashboard', 'Kategori']),
+          const RemahAdmin([
+            'Dashboard',
+            'Kategori',
+          ]),
           JudulKategori(
-            jumlahTingkat: data.jumlahTingkatBaca,
             onTambah: () => _dialogKategori(),
-            onLihatTingkat: () => _dialogTingkat(data),
           ),
-          const SizedBox(height: 16),
-          if (data.dataContoh) ...[
-            _keteranganContoh(),
-            const SizedBox(height: 14),
-          ],
-          KepalaBagianKategori(jumlahKategori: data.jumlahKategori),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
+          KepalaBagianKategori(
+            jumlahKategori: data.jumlahKategori,
+          ),
+          const SizedBox(height: 12),
           KisiKategori(
             kategori: data.kategori,
             onUbah: (item) => _dialogKategori(item),
-            onTambah: () => _dialogKategori(),
-          ),
-          const SizedBox(height: 14),
-          KartuDistribusiKategori(
-            distribusi: data.distribusi,
-            onLihatKatalog: () => _pesan(
-              'Katalog cerita lengkap tersedia di menu Kelola Cerita.',
-            ),
+            onHapus: (item) => _konfirmasiHapus(item),
           ),
         ],
       ),
     );
   }
+
+  // ========================================================
+  // TAMPILAN GAGAL MEMUAT DATA
+  // ========================================================
 
   Widget _galatTampilan() {
     return Center(
@@ -141,38 +149,24 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
     );
   }
 
-  Widget _keteranganContoh() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: GayaAdmin.oranyeMuda,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFF0DDB6)),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.info_outline, size: 15, color: GayaAdmin.oranye),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Tabel kategori masih kosong, data contoh ditampilkan agar '
-              'tampilan tetap lengkap.',
-              style: TextStyle(fontSize: 10, color: GayaAdmin.oranye),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------
+  // ========================================================
   // DIALOG TAMBAH / UBAH KATEGORI
-  // --------------------------------------------------------
+  // ========================================================
 
-  Future<void> _dialogKategori([KategoriCerita? item]) async {
-    final nama = TextEditingController(text: item?.nama ?? '');
-    final genre = TextEditingController(text: item?.genre ?? '');
-    final deskripsi = TextEditingController(text: item?.deskripsi ?? '');
+  Future<void> _dialogKategori([
+    KategoriCerita? item,
+  ]) async {
+    final nama = TextEditingController(
+      text: item?.nama ?? '',
+    );
+
+    final genre = TextEditingController(
+      text: item?.genre ?? '',
+    );
+
+    final deskripsi = TextEditingController(
+      text: item?.deskripsi ?? '',
+    );
 
     final isian = await showDialog<IsianKategori>(
       context: context,
@@ -220,7 +214,9 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
               child: const Text('Batal'),
             ),
             ElevatedButton(
@@ -232,9 +228,11 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
                 );
 
                 if (!hasil.valid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
-                      content: Text('Nama kategori harus diisi.'),
+                      content: Text(
+                        'Nama kategori harus diisi.',
+                      ),
                     ),
                   );
                   return;
@@ -272,48 +270,31 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
       isian: isian,
     );
 
+    if (!mounted) return;
+
     if (tersimpan) {
       await _muat();
-    } else if (_data != null) {
-      final daftar = List<KategoriCerita>.from(_data!.kategori);
 
-      if (item == null) {
-        daftar.add(
-          KategoriCerita.dariIsian(
-            isian,
-            id: -DateTime.now().millisecondsSinceEpoch,
-          ),
-        );
-      } else {
-        final indeks = daftar.indexWhere((row) => row.id == item.id);
+      if (!mounted) return;
 
-        if (indeks >= 0) {
-          daftar[indeks] = item.salinDengan(
-            nama: isian.nama.trim(),
-            genre: isian.genreFinal,
-            deskripsi: isian.deskripsi.trim(),
-          );
-        }
-      }
-
-      setState(() {
-        _data = _data!.denganKategori(daftar);
-      });
+      _pesan(
+        item == null
+            ? 'Kategori berhasil ditambahkan.'
+            : 'Kategori berhasil diperbarui.',
+      );
+    } else {
+      _pesan('Kategori gagal disimpan. Periksa koneksi database.');
     }
-
-    _pesan(
-      tersimpan
-          ? 'Kategori berhasil disimpan.'
-          : 'Kategori diperbarui pada sesi ini.',
-    );
   }
 
-  // --------------------------------------------------------
-  // DIALOG TINGKAT BACA
-  // --------------------------------------------------------
+  // ========================================================
+  // KONFIRMASI HAPUS KATEGORI
+  // ========================================================
 
-  Future<void> _dialogTingkat(DataKategori data) async {
-    await showDialog<void>(
+  Future<void> _konfirmasiHapus(
+    KategoriCerita item,
+  ) async {
+    final konfirmasi = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
@@ -322,138 +303,78 @@ class _KelolaKategoriPageState extends State<KelolaKategoriPage> {
           ),
           backgroundColor: Colors.white,
           title: const Text(
-            'Tingkat Baca Pustakoo',
+            'Hapus Kategori',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: GayaAdmin.biruTua,
             ),
           ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Tingkatan literasi dipakai untuk mengkalibrasi '
-                  'rekomendasi bacaan dan tingkat kesulitan kuis.',
-                  style: TextStyle(
-                    fontSize: 10,
-                    height: 1.5,
-                    color: GayaAdmin.teksAbu,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                for (final tingkat in TingkatBaca.values)
-                  _BarisTingkat(
-                    tingkat: tingkat,
-                    bagian: data.distribusi.bagian.firstWhere(
-                      (item) => item.tingkat == tingkat,
-                      orElse: () => BagianDistribusi(
-                        tingkat: tingkat,
-                        jumlah: 0,
-                      ),
-                    ),
-                    distribusi: data.distribusi,
-                  ),
-              ],
+          content: Text(
+            'Apakah kamu yakin ingin menghapus kategori '
+            '"${item.nama}"?',
+            style: const TextStyle(
+              fontSize: 12,
+              color: GayaAdmin.teks,
+              height: 1.5,
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Tutup'),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Hapus'),
             ),
           ],
         );
       },
     );
+
+    if (konfirmasi != true) return;
+
+    final berhasil = await _repositori.hapusKategori(item.id);
+
+    if (!mounted) return;
+
+    if (berhasil) {
+      await _muat();
+
+      if (!mounted) return;
+
+      _pesan('Kategori berhasil dihapus.');
+    } else {
+      _pesan(
+        'Kategori gagal dihapus. Pastikan kategori tidak '
+        'sedang digunakan oleh buku.',
+      );
+    }
   }
+
+  // ========================================================
+  // PESAN
+  // ========================================================
 
   void _pesan(String teks) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(teks)),
-    );
-  }
-}
-
-class _BarisTingkat extends StatelessWidget {
-  final TingkatBaca tingkat;
-  final BagianDistribusi bagian;
-  final DistribusiBuku distribusi;
-
-  const _BarisTingkat({
-    required this.tingkat,
-    required this.bagian,
-    required this.distribusi,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: GayaAdmin.latar,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: GayaAdmin.garis),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: GayaAdmin.biruMuda,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Text(
-              '${TingkatBaca.values.indexOf(tingkat) + 1}',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: GayaAdmin.biruTua,
-              ),
-            ),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tingkat.label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: GayaAdmin.biruTua,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  tingkat.kelompokUsia,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: GayaAdmin.teksAbu,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '${bagian.jumlah} buku • '
-            '${distribusi.persentase(bagian).round()}%',
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              color: GayaAdmin.teks,
-            ),
-          ),
-        ],
+      SnackBar(
+        content: Text(teks),
       ),
     );
   }

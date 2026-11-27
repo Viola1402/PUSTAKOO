@@ -350,10 +350,7 @@ class PanelCeritaPopuler extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Cerita Populer',
-                      style: _gayaJudulPanel,
-                    ),
+                    Text('Cerita Populer', style: _gayaJudulPanel),
                     SizedBox(height: 5),
                     Text(
                       'Buku cerita yang paling sering dibaca pekan ini',
@@ -771,10 +768,7 @@ class PanelAktivitasTerbaru extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Aktivitas Terbaru',
-            style: _gayaJudulPanel,
-          ),
+          const Text('Aktivitas Terbaru', style: _gayaJudulPanel),
           const SizedBox(height: 5),
           const Text(
             'Log aktivitas real-time orang tua & anak',
@@ -956,26 +950,26 @@ class KartuRingkasanDashboard extends StatelessWidget {
           'Rangkuman Mingguan',
           ikon: Icons.insights_outlined,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         const Text(
           'Ringkasan Laporan Pekan Ini',
           style: TextStyle(
-            fontSize: 23,
-            height: 1.2,
+            fontSize: 21,
+            height: 1.15,
             fontWeight: FontWeight.bold,
             color: GayaAdmin.biruTua,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         const Text(
           'Cerita terpopuler, rata-rata skor kuis, dan misi selesai',
           style: TextStyle(
-            fontSize: 12,
-            height: 1.45,
+            fontSize: 11,
+            height: 1.3,
             color: GayaAdmin.teksAbu,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         TombolAdmin(
           teks: 'Lihat Laporan',
           ikon: Icons.arrow_forward,
@@ -999,13 +993,13 @@ class KartuRingkasanDashboard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
               color: GayaAdmin.biruTua,
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         _BarisRingkasan(
           ikon: Icons.fact_check_outlined,
           label: 'Rata-rata skor kuis',
@@ -1016,17 +1010,17 @@ class KartuRingkasanDashboard extends StatelessWidget {
               Text(
                 '${ringkasan.rataRataKuis} / 100',
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: GayaAdmin.biruTua,
                 ),
               ),
               if (ringkasan.selisihKuis != 0) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 4,
+                    horizontal: 5,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: GayaAdmin.hijauMuda,
@@ -1035,7 +1029,7 @@ class KartuRingkasanDashboard extends StatelessWidget {
                   child: Text(
                     ringkasan.selisihLabel,
                     style: const TextStyle(
-                      fontSize: 9,
+                      fontSize: 8,
                       fontWeight: FontWeight.w700,
                       color: GayaAdmin.hijau,
                     ),
@@ -1045,7 +1039,7 @@ class KartuRingkasanDashboard extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         _BarisRingkasan(
           ikon: Icons.check_circle_outline,
           label: 'Misi selesai',
@@ -1054,12 +1048,12 @@ class KartuRingkasanDashboard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 84,
+                width: 65,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: (ringkasan.persentaseMisi / 100).clamp(0, 1),
-                    minHeight: 7,
+                    minHeight: 6,
                     backgroundColor: GayaAdmin.garis,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       GayaAdmin.hijau,
@@ -1067,11 +1061,11 @@ class KartuRingkasanDashboard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 5),
               Text(
                 '${ringkasan.persentaseMisi}%',
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: GayaAdmin.biruTua,
                 ),
@@ -1087,7 +1081,7 @@ class KartuRingkasanDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: GayaAdmin.krem,
         borderRadius: BorderRadius.circular(18),
@@ -1099,17 +1093,18 @@ class KartuRingkasanDashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(flex: 4, child: _kiri),
-                const SizedBox(width: 20),
+                const SizedBox(width: 12),
                 Expanded(flex: 5, child: _kanan),
               ],
             );
           }
 
           return Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _kiri,
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               _kanan,
             ],
           );
@@ -1118,6 +1113,10 @@ class KartuRingkasanDashboard extends StatelessWidget {
     );
   }
 }
+
+// ==========================================================
+// BARIS RINGKASAN
+// ==========================================================
 
 class _BarisRingkasan extends StatelessWidget {
   final IconData ikon;
@@ -1137,8 +1136,8 @@ class _BarisRingkasan extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 14,
+        horizontal: 9,
+        vertical: 7,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1147,32 +1146,41 @@ class _BarisRingkasan extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
               color: warnaIkon.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               ikon,
-              size: 18,
+              size: 15,
               color: warnaIkon,
             ),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 7),
           Expanded(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 color: GayaAdmin.teks,
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Flexible(child: kanan),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: kanan,
+              ),
+            ),
+          ),
         ],
       ),
     );
