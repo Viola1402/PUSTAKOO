@@ -3,19 +3,44 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class _Soal {
-  final String pertanyaan;
-  final String benar;
-  final List<String> pilihan; // sudah diacak, isinya 3 pilihan (A, B, C)
+import 'progres_belajar.dart';
+import 'tema_pustakoo.dart';
 
-  _Soal(this.pertanyaan, this.benar, this.pilihan);
+/// OOP: satu soal kuis dibungkus menjadi satu objek.
+class _Soal {
+  // ENKAPSULASI: field private, dibaca lewat getter.
+  final String _pertanyaan;
+  final String _benar;
+  final List<String> _pilihan; // sudah diacak, isinya 3 pilihan (A, B, C)
+
+  // CONSTRUCTOR biasa.
+  _Soal(this._pertanyaan, this._benar, this._pilihan);
+
+  // FACTORY CONSTRUCTOR: membuat soal dari satu baris database,
+  // sekalian mengacak urutan pilihan (1 benar + 2 salah, sesuai Figma).
+  factory _Soal.dariJson(Map<String, dynamic> r, Random acak) {
+    final benar = r['jawaban_benar'] as String;
+    final pilihan = <String>[
+      benar,
+      r['jawaban_salah_1'] as String,
+      r['jawaban_salah_2'] as String,
+    ]..shuffle(acak);
+    return _Soal(r['isi_pertanyaan'] as String, benar, pilihan);
+  }
+
+  String get pertanyaan => _pertanyaan;
+  List<String> get pilihan => List.unmodifiable(_pilihan);
+
+  bool apakahBenar(int indeksPilihan) => _pilihan[indeksPilihan] == _benar;
 }
 
+/// Layar Interactive Reading (Figma: 08-kuis dan 09-hasil-kuis).
 class KuisBuku extends StatefulWidget {
   final int anakId;
   final int kuisId;
   final String judul;
 
+  // CONSTRUCTOR dengan parameter bernama.
   const KuisBuku({
     super.key,
     required this.anakId,
@@ -28,6 +53,7 @@ class KuisBuku extends StatefulWidget {
 }
 
 class _KuisBukuState extends State<KuisBuku> {
+  // ENKAPSULASI: semua data layar private.
   final _supabase = Supabase.instance.client;
   final _acak = Random();
 
@@ -37,9 +63,11 @@ class _KuisBukuState extends State<KuisBuku> {
   int _indeks = 0;
   int _benar = 0;
   int? _dipilih; // indeks pilihan yang diketuk
+  bool _terkirim = false; // sudah menekan Kirim Jawaban
   bool _selesai = false;
   double _nilai = 0;
   bool _gagalSimpan = false;
+  String _namaAnak = 'Teman';
 
   @override
   void initState() {
@@ -54,28 +82,31 @@ class _KuisBukuState extends State<KuisBuku> {
     });
 
     try {
+      // Nama panggilan untuk sapaan di layar hasil. Kalau gagal, pakai "Teman".
+      try {
+        final anak = await _supabase
+            .from('anak')
+            .select('nama_panggilan')
+            .eq('id', widget.anakId)
+            .limit(1);
+        if (anak.isNotEmpty) _namaAnak = anak.first['nama_panggilan'] as String;
+      } catch (_) {}
+
       final data = await _supabase
           .from('pertanyaan')
           .select('isi_pertanyaan, jawaban_benar, jawaban_salah_1, jawaban_salah_2')
           .eq('kuis_id', widget.kuisId)
           .order('id');
 
-      // Sesuai desain Figma: 3 pilihan (1 benar + 2 salah), urutannya diacak.
-      final soal = data.map<_Soal>((r) {
-        final benar = r['jawaban_benar'] as String;
-        final pilihan = <String>[
-          benar,
-          r['jawaban_salah_1'] as String,
-          r['jawaban_salah_2'] as String,
-        ]..shuffle(_acak);
-        return _Soal(r['isi_pertanyaan'] as String, benar, pilihan);
-      }).toList();
+      // Tiap baris database diubah jadi objek _Soal lewat factory constructor.
+      final soal = data.map<_Soal>((r) => _Soal.dariJson(r, _acak)).toList();
 
       setState(() {
         _soal = soal;
         _indeks = 0;
         _benar = 0;
         _dipilih = null;
+        _terkirim = false;
         _selesai = false;
         _memuat = false;
       });
@@ -88,10 +119,15 @@ class _KuisBukuState extends State<KuisBuku> {
   }
 
   void _pilih(int i) {
-    if (_dipilih != null) return; // sudah menjawab
+    if (_terkirim) return;
+    setState(() => _dipilih = i);
+  }
+
+  void _kirim() {
+    if (_dipilih == null || _terkirim) return;
     setState(() {
-      _dipilih = i;
-      if (_soal[_indeks].pilihan[i] == _soal[_indeks].benar) _benar++;
+      _terkirim = true;
+      if (_soal[_indeks].apakahBenar(_dipilih!)) _benar++;
     });
   }
 
@@ -100,6 +136,7 @@ class _KuisBukuState extends State<KuisBuku> {
       setState(() {
         _indeks++;
         _dipilih = null;
+        _terkirim = false;
       });
       return;
     }
@@ -132,12 +169,35 @@ class _KuisBukuState extends State<KuisBuku> {
     }
   }
 
-  Color? _warnaPilihan(int i) {
-    if (_dipilih == null) return null;
+  void _ulangi() {
+    setState(() => _gagalSimpan = false);
+    _muat();
+  }
+
+  void _lihatProgres() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProgresBelajar(anakId: widget.anakId)),
+    );
+  }
+
+  void _keBeranda() {
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  // Warna kartu pilihan: biasa, terpilih, atau (setelah dikirim) benar/salah.
+  ({Color isi, Color garis}) _warnaPilihan(int i) {
     final s = _soal[_indeks];
-    if (s.pilihan[i] == s.benar) return Colors.green.shade100;
-    if (i == _dipilih) return Colors.red.shade100;
-    return null;
+
+    if (_terkirim) {
+      if (s.apakahBenar(i)) return (isi: Warna.hijauMuda, garis: Warna.hijau);
+      if (i == _dipilih) {
+        return (isi: const Color(0xFFFFD6D6), garis: const Color(0xFFE05555));
+      }
+    } else if (i == _dipilih) {
+      return (isi: Warna.kuning, garis: Warna.emas);
+    }
+    return (isi: Colors.white, garis: Warna.biruMuda);
   }
 
   Widget _tampilanSoal() {
@@ -145,120 +205,148 @@ class _KuisBukuState extends State<KuisBuku> {
     const huruf = ['A', 'B', 'C'];
     final terakhir = _indeks == _soal.length - 1;
 
-    return Column(
-      children: [
-        LinearProgressIndicator(value: (_indeks + 1) / _soal.length),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                'Pertanyaan ${_indeks + 1} dari ${_soal.length}',
-                style: TextStyle(color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                s.pertanyaan,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              for (var i = 0; i < s.pilihan.length; i++)
-                Card(
-                  color: _warnaPilihan(i),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    onTap: () => _pilih(i),
-                    leading: CircleAvatar(child: Text(huruf[i])),
-                    title: Text(s.pilihan[i], style: const TextStyle(fontSize: 18)),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Warna.kuning,
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Text('Soal ${_indeks + 1} dari ${_soal.length}', style: gaya(13)),
+              ),
+              const Spacer(),
+              const Panda(ukuran: 44),
             ],
           ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _dipilih == null ? null : _lanjut,
-                child: Text(terakhir ? 'Lihat Hasil' : 'Lanjut'),
-              ),
+          const SizedBox(height: 24),
+          Text(s.pertanyaan, style: gaya(22, tinggi: 1.35)),
+          const SizedBox(height: 22),
+          Expanded(
+            child: ListView(
+              children: [
+                for (var i = 0; i < s.pilihan.length; i++)
+                  Builder(builder: (context) {
+                    final w = _warnaPilihan(i);
+                    return GestureDetector(
+                      onTap: () => _pilih(i),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: w.isi,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: w.garis, width: 3),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 30,
+                              height: 30,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                color: Warna.biruMuda,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(huruf[i], style: gaya(15)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(s.pilihan[i], style: gaya(16))),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          if (!_terkirim)
+            TombolPustakoo(
+              label: 'Kirim Jawaban',
+              onTap: _dipilih == null ? null : _kirim,
+              warna: Warna.biruTua,
+              warnaTeks: Colors.white,
+            )
+          else
+            TombolPustakoo(
+              label: terakhir ? 'Lihat Hasil' : 'Lanjut',
+              onTap: _lanjut,
+              warna: Warna.biruTua,
+              warnaTeks: Colors.white,
+            ),
+        ],
+      ),
     );
   }
 
   Widget _tampilanHasil() {
     final bulat = _nilai.round();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              bulat >= 60 ? Icons.emoji_events : Icons.menu_book,
-              size: 80,
-              color: Colors.orange.shade700,
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          const Panda(ukuran: 110),
+          const SizedBox(height: 24),
+          Text(
+            bulat >= 60 ? 'Hebat, $_namaAnak!' : 'Ayo semangat, $_namaAnak!',
+            textAlign: TextAlign.center,
+            style: gaya(28),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
             ),
-            const SizedBox(height: 16),
-            Text(
-              bulat >= 60 ? 'Hebat!' : 'Ayo coba lagi!',
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            child: Column(
+              children: [
+                Text('Skormu', style: gaya(14)),
+                Text('$bulat', style: gaya(54, tinggi: 1.2)),
+                Text('$_benar dari ${_soal.length} benar', style: gaya(14)),
+                if (_gagalSimpan) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Nilai belum berhasil disimpan.',
+                    style: gaya(13, warna: const Color(0xFFE05555)),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 8),
-            Text('Benar $_benar dari ${_soal.length} soal',
-                style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 8),
-            Text('Nilai: $bulat',
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-            if (_gagalSimpan) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Nilai belum berhasil disimpan.',
-                style: TextStyle(color: Colors.red.shade700),
-              ),
-            ],
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: _ulangi, child: const Text('Ulangi Kuis')),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Kembali ke Beranda'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 18),
+          TombolPustakoo(label: 'Lihat Progres', onTap: _lihatProgres),
+          const SizedBox(height: 12),
+          TombolPustakoo(
+            label: 'Ke Beranda',
+            onTap: _keBeranda,
+            warna: Warna.biruTua,
+            warnaTeks: Colors.white,
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _ulangi,
+            child: Text('Ulangi Kuis', style: gaya(15)),
+          ),
+        ],
       ),
     );
-  }
-
-  void _ulangi() {
-    setState(() => _gagalSimpan = false);
-    _muat();
   }
 
   Widget _isi() {
     if (_memuat) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Gagal memuat kuis.', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 8),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: _muat, child: const Text('Coba lagi')),
-            ],
-          ),
-        ),
-      );
+      return KotakGalat(judul: 'Gagal memuat kuis.', pesan: _error!, onUlang: _muat);
     }
 
     if (_soal.isEmpty) {
@@ -270,9 +358,6 @@ class _KuisBukuState extends State<KuisBuku> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.judul)),
-      body: _isi(),
-    );
+    return KerangkaSeluler(child: _isi());
   }
 }
