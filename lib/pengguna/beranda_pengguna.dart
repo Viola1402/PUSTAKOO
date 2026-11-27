@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../autentikasi/login.dart';
+import '../widgets/sampul_cerita.dart';
 import 'baca_buku.dart';
 import 'layanan_beranda.dart';
 import 'model_anak.dart';
@@ -57,8 +58,8 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
   String? _galatMinat;
   String? _galatMisi;
 
-  // Penjaga urutan query: kalau pengguna cepat berganti profil, hasil query
-  // lama tidak boleh menimpa data profil yang baru dipilih.
+  // Penjaga urutan query agar hasil query lama tidak menimpa
+  // data profil anak yang baru dipilih.
   int _versi = 0;
 
   static const _warnaSampul = <Color>[
@@ -97,15 +98,18 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     });
 
     List<Anak> daftarAnak;
+
     try {
       daftarAnak = await _layanan.ambilDaftarAnak();
     } catch (e) {
       if (!mounted || versi != _versi) return;
+
       setState(() {
         _memuatAwal = false;
         _memuatDataAnak = false;
         _galatAwal = _pesanGalat(e);
       });
+
       return;
     }
 
@@ -128,6 +132,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     });
 
     if (anakAktif == null) return;
+
     await _muatBagianAnak(anakAktif.id, versi);
   }
 
@@ -136,9 +141,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     if (anak.id == _anakAktifId) return;
 
     final versi = ++_versi;
+
     setState(() {
       _anakAktifId = anak.id;
-      // Data anak sebelumnya langsung dibuang supaya tidak ikut tampil.
       _kosongkanDataAnak();
       _memuatDataAnak = true;
     });
@@ -148,14 +153,15 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
   /// Mengambil semua bagian data untuk satu anak.
   ///
-  /// Setiap bagian memakai try/catch sendiri supaya kalau satu query gagal
-  /// (misalnya RLS menolak), bagian lain tetap bisa ditampilkan.
+  /// Setiap bagian memakai try/catch sendiri supaya jika satu query gagal,
+  /// bagian lain tetap bisa ditampilkan.
   Future<void> _muatBagianAnak(int anakId, int versi) async {
     var buku = <Buku>[];
     var progres = <ProgresMembaca>[];
     var kategori = <Kategori>[];
     var idMinat = <int>[];
     var misi = <MisiAnak>[];
+
     String? galatBuku;
     String? galatProgres;
     String? galatKategori;
@@ -167,6 +173,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     } catch (e) {
       galatBuku = _pesanGalat(e);
     }
+
     if (!mounted || versi != _versi) return;
 
     try {
@@ -174,6 +181,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     } catch (e) {
       galatProgres = _pesanGalat(e);
     }
+
     if (!mounted || versi != _versi) return;
 
     try {
@@ -181,6 +189,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     } catch (e) {
       galatKategori = _pesanGalat(e);
     }
+
     if (!mounted || versi != _versi) return;
 
     try {
@@ -188,6 +197,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     } catch (e) {
       galatMinat = _pesanGalat(e);
     }
+
     if (!mounted || versi != _versi) return;
 
     try {
@@ -195,6 +205,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     } catch (e) {
       galatMisi = _pesanGalat(e);
     }
+
     if (!mounted || versi != _versi) return;
 
     setState(() {
@@ -203,11 +214,13 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       _kategori = kategori;
       _idMinat = idMinat;
       _misi = misi;
+
       _galatBuku = galatBuku;
       _galatProgres = galatProgres;
       _galatKategori = galatKategori;
       _galatMinat = galatMinat;
       _galatMisi = galatMisi;
+
       _memuatDataAnak = false;
     });
   }
@@ -219,6 +232,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     _kategori = [];
     _idMinat = [];
     _misi = [];
+
     _galatBuku = null;
     _galatProgres = null;
     _galatKategori = null;
@@ -231,9 +245,11 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     if (e is PostgrestException) {
       return 'Server tidak dapat diakses (${e.message}).';
     }
+
     if (e is AuthException) {
       return 'Sesi login bermasalah: ${e.message}';
     }
+
     return e.toString().replaceFirst('Exception: ', '');
   }
 
@@ -243,44 +259,53 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
   Anak? get _anakAktif {
     if (_daftarAnak.isEmpty) return null;
+
     for (final a in _daftarAnak) {
       if (a.id == _anakAktifId) return a;
     }
+
     return _daftarAnak.first;
   }
 
-  /// Kategori yang menjadi minat anak (hasil pencocokan id minat + kategori).
+  /// Kategori yang menjadi minat anak.
   List<Kategori> get _minatKategori =>
       _kategori.where((k) => _idMinat.contains(k.id)).toList();
 
-  /// Bacaan terakhir yang belum selesai, untuk kartu "Lanjutkan Membaca".
+  /// Bacaan terakhir yang belum selesai.
   BacaanBerjalan? get _lanjutan {
     for (final p in _progres) {
-      // Filter tetap: hanya bacaan yang belum selesai. Status tidak diubah.
+      // Hanya menampilkan bacaan yang belum selesai.
       if (p.selesai) continue;
+
       for (final b in _buku) {
         if (b.id != p.bukuId) continue;
-        // Buku yang terbukti belum punya halaman tidak bisa dilanjutkan.
+
+        // Buku yang belum mempunyai halaman tidak dapat dilanjutkan.
         if (b.tanpaHalaman) break;
+
         return BacaanBerjalan(b, p);
       }
     }
+
     return null;
   }
 
-  /// POLYMORPHISM saat program berjalan:
-  /// variabel `strategi` bertipe abstract [RekomendasiBuku], isinya bisa
-  /// RekomendasiMinat atau RekomendasiUmum tergantung data minat anak.
-  /// Pemanggilan `strategi.rekomendasikan()` menjalankan method yang berbeda
-  /// sesuai objek aslinya.
+  /// POLYMORPHISM:
+  /// Variabel strategi bertipe abstract Re komendasiBuku,
+  /// tetapi objeknya dapat berupa RekomendasiMinat
+  /// atau RekomendasiUmum.
   List<Buku> _susunRekomendasi() {
     final minat = _minatKategori;
 
     final RekomendasiBuku strategi;
+
     if (minat.isEmpty) {
       strategi = RekomendasiUmum(_buku);
     } else {
-      strategi = RekomendasiMinat(_buku, minat.map((k) => k.id).toList());
+      strategi = RekomendasiMinat(
+        _buku,
+        minat.map((k) => k.id).toList(),
+      );
     }
 
     return strategi.rekomendasikan(batas: 6);
@@ -302,18 +327,20 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
   /// Pesan singkat di bagian bawah layar.
   void _pesan(String teks) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(teks), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(teks),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
   /// Membuka layar baca milik anggota lain tanpa mengubah kontraknya.
-  ///
-  /// Buku yang sudah terbukti belum punya halaman tidak dibuka supaya
-  /// pengguna tidak masuk ke layar baca yang kosong.
   Future<void> _bukaBaca(Buku buku) async {
     final anak = _anakAktif;
+
     if (anak == null) return;
 
+    // Buku yang belum mempunyai halaman tidak dapat dibuka.
     if (buku.tanpaHalaman) {
       _pesan('Cerita "${buku.judul}" belum tersedia untuk dibaca.');
       return;
@@ -336,15 +363,14 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
   /// Menunda penyegaran sampai Beranda kembali menjadi halaman aktif.
   ///
-  /// Layar baca berpindah ke kuis dengan `pushReplacement`, sehingga future
-  /// `Navigator.push` di atas selesai ketika kuis masih terbuka. Kalau data
-  /// dimuat ulang tepat di titik itu, hasil kuis dan progres terakhir bisa
-  /// terlewat. Penyegaran karena itu menunggu Beranda aktif kembali, tanpa
-  /// mengubah alur navigasi bersama milik anggota lain.
+  /// Layar baca berpindah ke kuis dengan pushReplacement.
+  /// Penyegaran dilakukan setelah Beranda kembali aktif supaya
+  /// hasil kuis dan progres terakhir tidak terlewat.
   void _segarkanSetelahKembali() {
     _penundaSegarkan?.cancel();
 
     final rute = ModalRoute.of(context);
+
     if (rute == null || rute.isCurrent) {
       _muatSemua();
       return;
@@ -357,7 +383,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
         _penundaSegarkan = null;
         return;
       }
+
       final sekarang = ModalRoute.of(context);
+
       if (sekarang == null || sekarang.isCurrent) {
         timer.cancel();
         _penundaSegarkan = null;
@@ -369,6 +397,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
   /// Membuka layar Progres Belajar milik anggota lain.
   Future<void> _bukaProgres() async {
     final anak = _anakAktif;
+
     if (anak == null) {
       _infoPengembangan('Progres belajar');
       return;
@@ -376,7 +405,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ProgresBelajar(anakId: anak.id)),
+      MaterialPageRoute(
+        builder: (_) => ProgresBelajar(anakId: anak.id),
+      ),
     );
 
     if (mounted) await _muatSemua();
@@ -387,8 +418,13 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Keluar dari akun?', style: gaya(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Keluar dari akun?',
+          style: gaya(16),
+        ),
         content: Text(
           'Kamu bisa masuk kembali kapan saja.',
           style: gaya(13, warna: Warna.biruGelap),
@@ -400,7 +436,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('Keluar', style: gaya(13, warna: Warna.biruTua)),
+            child: Text(
+              'Keluar',
+              style: gaya(13, warna: Warna.biruTua),
+            ),
           ),
         ],
       ),
@@ -411,7 +450,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
+
     if (!mounted) return;
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -419,8 +460,8 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     );
   }
 
-  /// Detail singkat buku. Halaman Detail Buku penuh dikerjakan pada tahap
-  /// Perpustakaan, jadi untuk sekarang cukup lembar ringkas + tombol baca.
+  /// Detail singkat buku.
+  /// Halaman detail lengkap akan dikerjakan pada fitur Perpustakaan.
   Future<void> _tampilkanDetailBuku(Buku buku) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -429,7 +470,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       builder: (sheetContext) => Container(
         decoration: const BoxDecoration(
           color: Warna.latar,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(26),
+          ),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: SafeArea(
@@ -453,18 +496,28 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sampulBuku(buku, lebar: 92, tinggi: 120),
+                    _sampulBuku(
+                      buku,
+                      lebar: 92,
+                      tinggi: 120,
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(buku.judul, style: gaya(19)),
+                          Text(
+                            buku.judul,
+                            style: gaya(19),
+                          ),
                           const SizedBox(height: 4),
                           if (buku.keteranganSingkat.isNotEmpty)
                             Text(
                               buku.keteranganSingkat,
-                              style: gaya(12, warna: Warna.biruGelap),
+                              style: gaya(
+                                12,
+                                warna: Warna.biruGelap,
+                              ),
                             ),
                           const SizedBox(height: 10),
                           _keteranganHalaman(
@@ -481,11 +534,18 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                 ),
                 if (buku.deskripsi != null) ...[
                   const SizedBox(height: 18),
-                  Text('Sinopsis', style: gaya(14)),
+                  Text(
+                    'Sinopsis',
+                    style: gaya(14),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     buku.deskripsi!,
-                    style: gaya(12, warna: Warna.biruGelap, tinggi: 1.45),
+                    style: gaya(
+                      12,
+                      warna: Warna.biruGelap,
+                      tinggi: 1.45,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -502,7 +562,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                 Text(
                   'Detail buku lengkap akan tersedia di halaman Perpustakaan.',
                   textAlign: TextAlign.center,
-                  style: gaya(10, warna: Warna.biruGelap),
+                  style: gaya(
+                    10,
+                    warna: Warna.biruGelap,
+                  ),
                 ),
               ],
             ),
@@ -512,39 +575,55 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     );
   }
 
-  /// Keterangan jumlah halaman dengan tiga keadaan yang berbeda:
-  /// sudah ada isi, terverifikasi belum ada halaman, dan belum diketahui.
-  Widget _keteranganHalaman(Buku buku, {VoidCallback? onPeriksaUlang}) {
+  /// Keterangan jumlah halaman dengan tiga keadaan:
+  /// sudah ada isi, belum mempunyai halaman, dan belum diketahui.
+  Widget _keteranganHalaman(
+    Buku buku, {
+    VoidCallback? onPeriksaUlang,
+  }) {
     if (buku.punyaHalaman) {
       return Text(
         '${buku.jumlahHalaman} halaman',
-        style: gaya(12, warna: Warna.biruGelap),
+        style: gaya(
+          12,
+          warna: Warna.biruGelap,
+        ),
       );
     }
 
     if (buku.tanpaHalaman) {
       return Row(
         children: [
-          const Icon(Icons.menu_book_rounded, size: 15, color: Warna.abuGelap),
+          const Icon(
+            Icons.menu_book_rounded,
+            size: 15,
+            color: Warna.abuGelap,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               'Cerita belum tersedia',
-              style: gaya(12, warna: Warna.abuGelap),
+              style: gaya(
+                12,
+                warna: Warna.abuGelap,
+              ),
             ),
           ),
         ],
       );
     }
 
-    // Null: query gagal atau hasilnya belum bisa dipercaya, jadi buku tidak
-    // langsung dianggap tidak punya halaman. Sediakan pemeriksaan ulang.
+    // Null berarti jumlah halaman belum diketahui.
+    // Buku tidak langsung dianggap tidak memiliki halaman.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Jumlah halaman belum diketahui.',
-          style: gaya(12, warna: Warna.abuGelap),
+          style: gaya(
+            12,
+            warna: Warna.abuGelap,
+          ),
         ),
         SizedBox(
           height: 34,
@@ -555,7 +634,13 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
               minimumSize: const Size(0, 34),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text('Periksa ulang', style: gaya(11, warna: Warna.biruTua)),
+            child: Text(
+              'Periksa ulang',
+              style: gaya(
+                11,
+                warna: Warna.biruTua,
+              ),
+            ),
           ),
         ),
       ],
@@ -579,7 +664,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     );
   }
 
-  /// Bilah atas: saldo poin anak dan avatar (sesuai desain Figma).
+  /// Bilah atas: saldo poin anak dan avatar.
   Widget _bilahAtas() {
     final anak = _anakAktif;
 
@@ -593,7 +678,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
           IconButton(
             tooltip: 'Keluar',
             onPressed: _konfirmasiLogout,
-            icon: const Icon(Icons.logout_rounded, color: Warna.biruTua),
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Warna.biruTua,
+            ),
           ),
           const Spacer(),
           if (anak != null)
@@ -601,13 +689,18 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
               borderRadius: BorderRadius.circular(20),
               onTap: () => _infoPengembangan('Penukaran poin'),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Warna.persik,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${anak.poin} Poin', style: gaya(14)),
+                child: Text(
+                  '${anak.poin} Poin',
+                  style: gaya(14),
+                ),
               ),
             ),
           const SizedBox(width: 12),
@@ -621,7 +714,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
             ),
             child: Text(
               anak?.hurufAwal ?? '?',
-              style: gaya(16, warna: Warna.biruTua),
+              style: gaya(
+                16,
+                warna: Warna.biruTua,
+              ),
             ),
           ),
         ],
@@ -632,7 +728,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
   Widget _isi() {
     if (_memuatAwal) {
       return const Center(
-          child: CircularProgressIndicator(color: Warna.biruTua));
+        child: CircularProgressIndicator(
+          color: Warna.biruTua,
+        ),
+      );
     }
 
     if (_galatAwal != null) {
@@ -689,6 +788,7 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
 
     final String sapaan;
     final String keterangan;
+
     if (anak == null) {
       sapaan = 'Halo, Ayah & Bunda!';
       keterangan = 'Yuk baca bareng si kecil hari ini';
@@ -708,20 +808,32 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: Warna.biruMuda, width: 2),
+              border: Border.all(
+                color: Warna.biruMuda,
+                width: 2,
+              ),
             ),
-            child: const Center(child: Panda(ukuran: 52)),
+            child: const Center(
+              child: Panda(ukuran: 52),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(sapaan, style: gaya(23)),
+                Text(
+                  sapaan,
+                  style: gaya(23),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   keterangan,
-                  style: gaya(12, warna: Warna.biruGelap, tinggi: 1.3),
+                  style: gaya(
+                    12,
+                    warna: Warna.biruGelap,
+                    tinggi: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -731,12 +843,18 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     );
   }
 
-  /// Pemilih profil sederhana (tampil hanya jika anak lebih dari satu).
+  /// Pemilih profil apabila akun mempunyai lebih dari satu anak.
   Widget _pemilihAnak() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Pilih profil anak', style: gaya(12, warna: Warna.biruGelap)),
+        Text(
+          'Pilih profil anak',
+          style: gaya(
+            12,
+            warna: Warna.biruGelap,
+          ),
+        ),
         const SizedBox(height: 8),
         SizedBox(
           height: 38,
@@ -751,13 +869,18 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
               return ChoiceChip(
                 label: Text(
                   anak.namaPanggilan,
-                  style: gaya(12, warna: Warna.biruTua),
+                  style: gaya(
+                    12,
+                    warna: Warna.biruTua,
+                  ),
                 ),
                 selected: dipilih,
                 onSelected: (_) => _gantiAnak(anak),
                 selectedColor: Warna.kuning,
                 backgroundColor: Colors.white,
-                side: const BorderSide(color: Warna.biruTitik),
+                side: const BorderSide(
+                  color: Warna.biruTitik,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -794,9 +917,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     final buku = lanjut.buku;
     final progres = lanjut.progres;
     final total = buku.jumlahHalaman;
+
     final adaTotal = total != null && total > 0;
-    // Progress bar hanya tampil kalau total halaman valid. Total null (belum
-    // diketahui) atau 0 tidak dipakai sebagai pembagi.
+
+    // Progress bar hanya tampil jika total halaman valid.
     final kemajuan = adaTotal
         ? (progres.halamanTampil(total) / total).clamp(0.0, 1.0).toDouble()
         : null;
@@ -812,7 +936,11 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
         ),
         child: Row(
           children: [
-            _sampulBuku(buku, lebar: 72, tinggi: 88),
+            _sampulBuku(
+              buku,
+              lebar: 72,
+              tinggi: 88,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -831,7 +959,10 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                         : buku.tanpaHalaman
                             ? 'Cerita belum tersedia'
                             : 'Halaman ${progres.halamanTerakhir}',
-                    style: gaya(12, warna: Warna.biruGelap),
+                    style: gaya(
+                      12,
+                      warna: Warna.biruGelap,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   if (kemajuan != null)
@@ -848,8 +979,11 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.play_circle_fill_rounded,
-                color: Warna.biruTua, size: 30),
+            const Icon(
+              Icons.play_circle_fill_rounded,
+              color: Warna.biruTua,
+              size: 30,
+            ),
           ],
         ),
       ),
@@ -880,19 +1014,27 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
           minat.isEmpty
               ? 'Pilihan dari semua cerita terbit'
               : 'Sesuai minat: ${minat.map((k) => k.nama).join(', ')}',
-          style: gaya(11, warna: Warna.biruGelap),
+          style: gaya(
+            11,
+            warna: Warna.biruGelap,
+          ),
         ),
         if (_galatMinat != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               'Minat anak belum dapat dimuat, memakai rekomendasi umum.',
-              style: gaya(10, warna: Warna.biruGelap),
+              style: gaya(
+                10,
+                warna: Warna.biruGelap,
+              ),
             ),
           ),
         const SizedBox(height: 12),
         if (_buku.isEmpty)
-          _kartuKosong('Belum ada cerita yang diterbitkan saat ini.')
+          _kartuKosong(
+            'Belum ada cerita yang diterbitkan saat ini.',
+          )
         else
           GridView.builder(
             shrinkWrap: true,
@@ -918,7 +1060,12 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _sampulBuku(buku, lebar: double.infinity)),
+          Expanded(
+            child: _sampulBuku(
+              buku,
+              lebar: double.infinity,
+            ),
+          ),
           const SizedBox(height: 10),
           Text(
             buku.judul,
@@ -931,39 +1078,61 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
               buku.keteranganSingkat,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: gaya(11, warna: Warna.biruGelap),
+              style: gaya(
+                11,
+                warna: Warna.biruGelap,
+              ),
             ),
           if (buku.tanpaHalaman)
             Text(
               'Cerita belum tersedia',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: gaya(10, warna: Warna.abuGelap),
+              style: gaya(
+                10,
+                warna: Warna.abuGelap,
+              ),
             )
           else if (buku.jumlahHalamanBelumDiketahui)
             Text(
               'Jumlah halaman belum diketahui',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: gaya(10, warna: Warna.abuGelap),
+              style: gaya(
+                10,
+                warna: Warna.abuGelap,
+              ),
             ),
         ],
       ),
     );
   }
 
-  /// Sampul buku: gambar jaringan kalau ada, kalau tidak pakai huruf awal
-  /// di dalam lingkaran putih dengan latar pastel seperti desain Figma.
-  Widget _sampulBuku(Buku buku, {double? lebar, double? tinggi}) {
+  /// Menampilkan sampul buku menggunakan widget SampulCerita.
+  ///
+  /// Mendukung gambar dari URL dan data URI Base64.
+  /// Apabila sumber gambar kosong, tetap menampilkan huruf awal judul
+  /// dengan latar pastel sesuai desain Beranda sebelumnya.
+  Widget _sampulBuku(
+    Buku buku, {
+    double? lebar,
+    double? tinggi,
+  }) {
     final warna = _warnaSampul[buku.id % _warnaSampul.length];
+    final url = buku.gambarSampul;
 
     final huruf = Container(
       width: 76,
       height: 76,
       alignment: Alignment.center,
-      decoration:
-          const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-      child: Text(buku.hurufAwal, style: gaya(34)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        buku.hurufAwal,
+        style: gaya(34),
+      ),
     );
 
     final cadangan = Container(
@@ -972,23 +1141,27 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       child: huruf,
     );
 
-    final url = buku.gambarSampul;
-    final isi = (url == null || url.isEmpty)
-        ? cadangan
-        : Image.network(
-            url,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, __, ___) => cadangan,
-          );
-
     return SizedBox(
       width: lebar ?? 56,
       height: tinggi,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: isi,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (url == null || url.trim().isEmpty) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: cadangan,
+            );
+          }
+
+          return SampulCerita(
+            sumber: url,
+            lebar: constraints.hasBoundedWidth ? constraints.maxWidth : 56.0,
+            tinggi: constraints.hasBoundedHeight ? constraints.maxHeight : 72.0,
+            radius: BorderRadius.circular(20),
+            warnaIkon: Warna.biruTua,
+            warnaLatar: warna,
+          );
+        },
       ),
     );
   }
@@ -1014,9 +1187,14 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
             children: [
               for (final k in _kategori)
                 ActionChip(
-                  label: Text(k.nama, style: gaya(12)),
+                  label: Text(
+                    k.nama,
+                    style: gaya(12),
+                  ),
                   backgroundColor: Colors.white,
-                  side: const BorderSide(color: Warna.biruTitik),
+                  side: const BorderSide(
+                    color: Warna.biruTitik,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -1040,7 +1218,9 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
         if (_galatMisi != null)
           _kartuGalatBagian(_galatMisi!)
         else if (daftar.isEmpty)
-          _kartuKosong('Belum ada misi membaca untuk saat ini.')
+          _kartuKosong(
+            'Belum ada misi membaca untuk saat ini.',
+          )
         else
           for (final item in daftar) _kartuMisi(item),
       ],
@@ -1069,20 +1249,34 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                   color: Warna.krem,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.flag_rounded, size: 18, color: Warna.emas),
+                child: const Icon(
+                  Icons.flag_rounded,
+                  size: 18,
+                  color: Warna.emas,
+                ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text(item.misi.judul, style: gaya(14))),
+              Expanded(
+                child: Text(
+                  item.misi.judul,
+                  style: gaya(14),
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: selesai ? Warna.hijauMuda : Warna.biruTitik,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   item.keteranganStatus,
-                  style: gaya(10, warna: selesai ? Warna.hijau : Warna.biruTua),
+                  style: gaya(
+                    10,
+                    warna: selesai ? Warna.hijau : Warna.biruTua,
+                  ),
                 ),
               ),
             ],
@@ -1091,7 +1285,11 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
             const SizedBox(height: 6),
             Text(
               item.misi.deskripsi!,
-              style: gaya(11, warna: Warna.biruGelap, tinggi: 1.3),
+              style: gaya(
+                11,
+                warna: Warna.biruGelap,
+                tinggi: 1.3,
+              ),
             ),
           ],
           const SizedBox(height: 10),
@@ -1111,12 +1309,22 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
                 item.misi.target > 0
                     ? '${item.progresSaatIni} dari ${item.misi.target}'
                     : 'Target belum ditentukan',
-                style: gaya(11, warna: Warna.biruGelap),
+                style: gaya(
+                  11,
+                  warna: Warna.biruGelap,
+                ),
               ),
               const Spacer(),
-              const Icon(Icons.stars_rounded, size: 14, color: Warna.emas),
+              const Icon(
+                Icons.stars_rounded,
+                size: 14,
+                color: Warna.emas,
+              ),
               const SizedBox(width: 4),
-              Text('${item.misi.hadiahPoin} poin', style: gaya(11)),
+              Text(
+                '${item.misi.hadiahPoin} poin',
+                style: gaya(11),
+              ),
             ],
           ),
         ],
@@ -1124,18 +1332,35 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
     );
   }
 
-  Widget _judulBagian(String judul, {String? aksi, VoidCallback? onAksi}) {
+  Widget _judulBagian(
+    String judul, {
+    String? aksi,
+    VoidCallback? onAksi,
+  }) {
     return Row(
       children: [
-        Expanded(child: Text(judul, style: gaya(17))),
+        Expanded(
+          child: Text(
+            judul,
+            style: gaya(17),
+          ),
+        ),
         if (aksi != null)
           TextButton(
             onPressed: onAksi,
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
               minimumSize: const Size(0, 32),
             ),
-            child: Text(aksi, style: gaya(11, warna: Warna.biruGelap)),
+            child: Text(
+              aksi,
+              style: gaya(
+                11,
+                warna: Warna.biruGelap,
+              ),
+            ),
           ),
       ],
     );
@@ -1157,19 +1382,24 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: Warna.biruTua),
+              strokeWidth: 2.5,
+              color: Warna.biruTua,
+            ),
           ),
           const SizedBox(width: 12),
           Text(
             'Memuat data ${anak?.namaPanggilan ?? 'anak'}...',
-            style: gaya(12, warna: Warna.biruGelap),
+            style: gaya(
+              12,
+              warna: Warna.biruGelap,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Empty state: data berhasil diambil, tetapi isinya kosong.
+  /// Empty state ketika data berhasil diambil tetapi isinya kosong.
   Widget _kartuKosong(String pesan) {
     return Container(
       width: double.infinity,
@@ -1177,16 +1407,22 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Warna.biruTitik),
+        border: Border.all(
+          color: Warna.biruTitik,
+        ),
       ),
       child: Text(
         pesan,
-        style: gaya(12, warna: Warna.biruGelap, tinggi: 1.4),
+        style: gaya(
+          12,
+          warna: Warna.biruGelap,
+          tinggi: 1.4,
+        ),
       ),
     );
   }
 
-  /// Error state per bagian: bagian lain tetap bisa tampil.
+  /// Error state per bagian agar bagian lain tetap dapat tampil.
   Widget _kartuGalatBagian(String pesan) {
     return Container(
       width: double.infinity,
@@ -1194,31 +1430,47 @@ class _BerandaOrangTuaState extends State<BerandaOrangTua> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Warna.biruTitik),
+        border: Border.all(
+          color: Warna.biruTitik,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Gagal memuat bagian ini.',
-            style: gaya(12, warna: Warna.biruTua),
+            style: gaya(
+              12,
+              warna: Warna.biruTua,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             pesan,
-            style: gaya(11, warna: Warna.biruGelap, tinggi: 1.35),
+            style: gaya(
+              11,
+              warna: Warna.biruGelap,
+              tinggi: 1.35,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
             width: 140,
-            child: TombolPustakoo(label: 'Coba lagi', onTap: _muatSemua),
+            child: TombolPustakoo(
+              label: 'Coba lagi',
+              onTap: _muatSemua,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Navigasi bawah sesuai desain Figma Pustakoo.
+  // ---------------------------------------------------------------------------
+  // NAVIGASI BAWAH
+  // ---------------------------------------------------------------------------
+
+  /// Navigasi bawah sesuai desain Figma Pustakoo.
   Widget _navigasiBawah() {
     const List<IconData> ikonNav = [
       Icons.home_outlined,

@@ -62,8 +62,8 @@ class _KuisBukuState extends State<KuisBuku> {
   List<_Soal> _soal = [];
   int _indeks = 0;
   int _benar = 0;
-  int? _dipilih; // indeks pilihan yang diketuk
-  bool _terkirim = false; // sudah menekan Kirim Jawaban
+  int? _dipilih; // pilihan yang baru diketuk (untuk menampilkan benar/salah)
+  bool _terkunci = false; // mencegah ketukan ganda saat pindah soal
   bool _selesai = false;
   double _nilai = 0;
   bool _gagalSimpan = false;
@@ -106,7 +106,7 @@ class _KuisBukuState extends State<KuisBuku> {
         _indeks = 0;
         _benar = 0;
         _dipilih = null;
-        _terkirim = false;
+        _terkunci = false;
         _selesai = false;
         _memuat = false;
       });
@@ -118,25 +118,27 @@ class _KuisBukuState extends State<KuisBuku> {
     }
   }
 
-  void _pilih(int i) {
-    if (_terkirim) return;
-    setState(() => _dipilih = i);
-  }
+  /// Begitu satu pilihan diketuk, langsung dinilai: pilihan benar menyala
+  /// hijau dan pilihan yang salah menyala merah. Sekitar satu detik kemudian
+  /// layar pindah sendiri ke soal berikutnya (atau ke hasil kalau sudah
+  /// soal terakhir). Tidak perlu menekan tombol apa pun.
+  Future<void> _jawab(int i) async {
+    if (_terkunci) return;
 
-  void _kirim() {
-    if (_dipilih == null || _terkirim) return;
     setState(() {
-      _terkirim = true;
-      if (_soal[_indeks].apakahBenar(_dipilih!)) _benar++;
+      _terkunci = true;
+      _dipilih = i;
+      if (_soal[_indeks].apakahBenar(i)) _benar++;
     });
-  }
 
-  Future<void> _lanjut() async {
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+
     if (_indeks < _soal.length - 1) {
       setState(() {
         _indeks++;
         _dipilih = null;
-        _terkirim = false;
+        _terkunci = false;
       });
       return;
     }
@@ -185,17 +187,16 @@ class _KuisBukuState extends State<KuisBuku> {
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
-  // Warna kartu pilihan: biasa, terpilih, atau (setelah dikirim) benar/salah.
+  // Warna kartu pilihan: biasa, atau (setelah diketuk) hijau untuk yang benar
+  // dan merah untuk pilihan anak yang salah.
   ({Color isi, Color garis}) _warnaPilihan(int i) {
-    final s = _soal[_indeks];
-
-    if (_terkirim) {
-      if (s.apakahBenar(i)) return (isi: Warna.hijauMuda, garis: Warna.hijau);
+    if (_dipilih != null) {
+      if (_soal[_indeks].apakahBenar(i)) {
+        return (isi: Warna.hijauMuda, garis: Warna.hijau);
+      }
       if (i == _dipilih) {
         return (isi: const Color(0xFFFFD6D6), garis: const Color(0xFFE05555));
       }
-    } else if (i == _dipilih) {
-      return (isi: Warna.kuning, garis: Warna.emas);
     }
     return (isi: Colors.white, garis: Warna.biruMuda);
   }
@@ -203,7 +204,6 @@ class _KuisBukuState extends State<KuisBuku> {
   Widget _tampilanSoal() {
     final s = _soal[_indeks];
     const huruf = ['A', 'B', 'C'];
-    final terakhir = _indeks == _soal.length - 1;
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -231,55 +231,37 @@ class _KuisBukuState extends State<KuisBuku> {
             child: ListView(
               children: [
                 for (var i = 0; i < s.pilihan.length; i++)
-                  Builder(builder: (context) {
-                    final w = _warnaPilihan(i);
-                    return GestureDetector(
-                      onTap: () => _pilih(i),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: w.isi,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: w.garis, width: 3),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 30,
-                              height: 30,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                color: Warna.biruMuda,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(huruf[i], style: gaya(15)),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(child: Text(s.pilihan[i], style: gaya(16))),
-                          ],
-                        ),
+                  GestureDetector(
+                    onTap: () => _jawab(i),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: _warnaPilihan(i).isi,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _warnaPilihan(i).garis, width: 3),
                       ),
-                    );
-                  }),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: Warna.biruMuda,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(huruf[i], style: gaya(15)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(s.pilihan[i], style: gaya(16))),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          if (!_terkirim)
-            TombolPustakoo(
-              label: 'Kirim Jawaban',
-              onTap: _dipilih == null ? null : _kirim,
-              warna: Warna.biruTua,
-              warnaTeks: Colors.white,
-            )
-          else
-            TombolPustakoo(
-              label: terakhir ? 'Lihat Hasil' : 'Lanjut',
-              onTap: _lanjut,
-              warna: Warna.biruTua,
-              warnaTeks: Colors.white,
-            ),
         ],
       ),
     );

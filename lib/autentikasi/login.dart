@@ -348,16 +348,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Coba email "admin@pustakoo.id" '
-                    'untuk tampilan Admin',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: biru,
-                    ),
-                  ),
+                 
                 ],
               ),
             ),
