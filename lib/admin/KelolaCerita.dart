@@ -7,6 +7,22 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/sampul_cerita.dart';
 import 'admin_shell.dart';
 
+String _pesanGalatDb(Object e) {
+  final teks = e.toString();
+  final kecil = teks.toLowerCase();
+
+  if (teks.contains('42501') || kecil.contains('row-level security')) {
+    return 'Akses ditolak oleh RLS. Pastikan policy INSERT/UPDATE/DELETE '
+        'untuk admin sudah dibuat di Supabase.';
+  }
+
+  if (kecil.contains('does not exist')) {
+    return 'Kolom atau tabel tidak ditemukan di database. Periksa skema.';
+  }
+
+  return teks;
+}
+
 class KelolaCeritaPage extends StatefulWidget {
   const KelolaCeritaPage({super.key});
 
@@ -178,10 +194,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
       text: item?['gambar_sampul']?.toString() ?? '',
     );
 
-    final hargaController = TextEditingController(
-      text: item?['harga_poin']?.toString() ?? '0',
-    );
-
     int? kategoriId = item == null ? null : angka(item['kategori_id']);
 
     String tingkatMembaca = item?['tingkat_membaca']?.toString() ?? 'Pemula';
@@ -239,7 +251,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
       judulController.dispose();
       deskripsiController.dispose();
       gambarController.dispose();
-      hargaController.dispose();
       return;
     }
 
@@ -403,15 +414,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      _labelForm('Harga Poin'),
-                      TextField(
-                        controller: hargaController,
-                        keyboardType: TextInputType.number,
-                        decoration: _dekorasiForm(
-                          'Contoh: 0',
-                        ),
-                      ),
-                      const SizedBox(height: 14),
                       _labelForm('Status Cerita'),
                       DropdownButtonFormField<String>(
                         value: status,
@@ -465,8 +467,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                                   namaSampul ?? 'sampul.jpg',
                                 )
                               : gambarUrl;
-                          final harga =
-                              int.tryParse(hargaController.text.trim());
 
                           if (judul.isEmpty) {
                             tampilkanPesan('Judul cerita wajib diisi.');
@@ -475,13 +475,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
 
                           if (kategoriId == null) {
                             tampilkanPesan('Silakan pilih kategori.');
-                            return;
-                          }
-
-                          if (harga == null || harga < 0) {
-                            tampilkanPesan(
-                              'Harga poin harus berupa angka 0 atau lebih.',
-                            );
                             return;
                           }
 
@@ -495,16 +488,21 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                             'kategori_id': kategoriId,
                             'tingkat_membaca': tingkatMembaca,
                             'gambar_sampul': gambar.isEmpty ? null : gambar,
-                            'harga_poin': harga,
                             'status': status,
                           };
 
                           try {
                             if (isEdit) {
-                              await supabase
+                              final hasil = await supabase
                                   .from('buku')
                                   .update(data)
-                                  .eq('id', item['id']);
+                                  .eq('id', item['id'])
+                                  .select('id');
+
+                              if (hasil.isEmpty) {
+                                throw 'Data tidak berubah. Periksa izin '
+                                    'update (RLS) tabel buku.';
+                              }
                             } else {
                               await supabase.from('buku').insert(data);
                             }
@@ -524,7 +522,9 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                               menyimpan = false;
                             });
 
-                            tampilkanPesan('Gagal menyimpan cerita: $e');
+                            tampilkanPesan(
+                              'Gagal menyimpan cerita: ${_pesanGalatDb(e)}',
+                            );
                           }
                         },
                   child: menyimpan
@@ -548,7 +548,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     judulController.dispose();
     deskripsiController.dispose();
     gambarController.dispose();
-    hargaController.dispose();
   }
 
   Widget _pilihanSampul(
@@ -742,6 +741,23 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     }
   }
 
+  Future<bool> _hapusBarisBuku(dynamic id) async {
+    final hasil =
+        await supabase.from('buku').delete().eq('id', id).select('id');
+
+    return hasil.isNotEmpty;
+  }
+
+  Future<void> _hapusDataTurunan(dynamic id) async {
+    for (final tabel in ['halaman_buku', 'kuis']) {
+      try {
+        await supabase.from(tabel).delete().eq('buku_id', id);
+      } catch (_) {
+        // Tabel turunan opsional; kegagalan di sini tidak menghentikan hapus buku.
+      }
+    }
+  }
+
   Future<void> hapusCerita(Map<String, dynamic> item) async {
     final konfirmasi = await showDialog<bool>(
       context: context,
@@ -769,14 +785,42 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
 
     if (konfirmasi != true) return;
 
+    final id = item['id'];
+
+    setState(() => sedangMemuat = true);
+
     try {
-      await supabase.from('buku').delete().eq('id', item['id']);
+      bool terhapus;
+
+      try {
+        terhapus = await _hapusBarisBuku(id);
+      } on PostgrestException catch (e) {
+        // 23503: masih ada data turunan yang mereferensikan buku ini.
+        if (e.code != '23503') rethrow;
+
+        await _hapusDataTurunan(id);
+        terhapus = await _hapusBarisBuku(id);
+      }
+
+      if (!terhapus) {
+        if (!mounted) return;
+
+        setState(() => sedangMemuat = false);
+
+        tampilkanPesan(
+          'Cerita gagal dihapus: tidak ada data yang terhapus. Kemungkinan '
+          'policy DELETE untuk tabel buku belum dibuat di Supabase (RLS).',
+        );
+        return;
+      }
 
       await muatCerita();
 
       tampilkanPesan('Cerita berhasil dihapus.');
     } catch (e) {
-      tampilkanPesan('Gagal menghapus cerita: $e');
+      if (mounted) setState(() => sedangMemuat = false);
+
+      tampilkanPesan('Gagal menghapus cerita: ${_pesanGalatDb(e)}');
     }
   }
 
@@ -1075,7 +1119,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     final kategoriNama = namaKategori(item['kategori_id']);
     final status = statusCerita(item);
     final tingkat = teks(item['tingkat_membaca'], 'Belum diatur');
-    final harga = angka(item['harga_poin']);
     final gambar = teks(item['gambar_sampul'], '');
 
     return Container(
@@ -1151,11 +1194,6 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
                     fontSize: 11,
                     color: Color(0xFF64748B),
                   ),
-                ),
-                const SizedBox(height: 7),
-                _infoCerita(
-                  Icons.stars_outlined,
-                  '$harga Poin',
                 ),
               ],
             ),
@@ -1258,6 +1296,19 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
           onPressed: () => editCerita(item),
           icon: const Icon(Icons.edit_outlined, size: 14),
           label: const Text('Ubah'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: biruTua,
+            side: BorderSide(color: garis),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 10,
+            ),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => dialogHalaman(item),
+          icon: const Icon(Icons.auto_stories_outlined, size: 14),
+          label: const Text('Halaman'),
           style: OutlinedButton.styleFrom(
             foregroundColor: biruTua,
             side: BorderSide(color: garis),
@@ -1373,6 +1424,16 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
     );
   }
 
+  Future<void> dialogHalaman(Map<String, dynamic> item) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _DialogHalaman(
+        bukuId: item['id'],
+        judul: teks(item['judul'], 'Cerita'),
+      ),
+    );
+  }
+
   Widget _footer() {
     return Row(
       children: [
@@ -1389,6 +1450,456 @@ class _KelolaCeritaPageState extends State<KelolaCeritaPage> {
           tooltip: 'Muat ulang',
           onPressed: muatCerita,
           icon: Icon(Icons.refresh, color: biru),
+        ),
+      ],
+    );
+  }
+}
+
+// ==========================================================
+// DIALOG KELOLA HALAMAN CERITA (tabel halaman_buku)
+// ==========================================================
+
+class _DialogHalaman extends StatefulWidget {
+  const _DialogHalaman({required this.bukuId, required this.judul});
+
+  final dynamic bukuId;
+  final String judul;
+
+  @override
+  State<_DialogHalaman> createState() => _DialogHalamanState();
+}
+
+class _DialogHalamanState extends State<_DialogHalaman> {
+  final supabase = Supabase.instance.client;
+
+  List<Map<String, dynamic>> halaman = [];
+  bool memuat = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    muat();
+  }
+
+  Future<void> muat() async {
+    if (!mounted) return;
+
+    setState(() {
+      memuat = true;
+      error = null;
+    });
+
+    try {
+      final hasil = await supabase
+          .from('halaman_buku')
+          .select('id, buku_id, nomor_halaman, isi_halaman, ilustrasi')
+          .eq('buku_id', widget.bukuId)
+          .order('nomor_halaman');
+
+      if (!mounted) return;
+
+      setState(() {
+        halaman = List<Map<String, dynamic>>.from(hasil);
+        memuat = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        memuat = false;
+        error = e.toString();
+      });
+    }
+  }
+
+  Future<void> form({Map<String, dynamic>? item}) async {
+    final nomor = TextEditingController(
+      text: '${item?['nomor_halaman'] ?? (halaman.length + 1)}',
+    );
+    final isi = TextEditingController(
+      text: '${item?['isi_halaman'] ?? ''}',
+    );
+    final ilustrasi = TextEditingController(
+      text: '${item?['ilustrasi'] ?? ''}',
+    );
+
+    bool menyimpan = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, atur) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                item == null ? 'Tambah Halaman' : 'Ubah Halaman',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: GayaAdmin.biruTua,
+                ),
+              ),
+              content: SizedBox(
+                width: 420,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nomor,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Nomor Halaman',
+                          hintText: 'Contoh: 1',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: isi,
+                        maxLines: 5,
+                        decoration: const InputDecoration(
+                          labelText: 'Isi Halaman',
+                          hintText: 'Teks cerita untuk halaman ini',
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: ilustrasi,
+                        decoration: const InputDecoration(
+                          labelText: 'Ilustrasi (URL)',
+                          hintText: 'https://contoh.com/ilustrasi.jpg',
+                          helperText: 'Boleh dikosongkan.',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      menyimpan ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: menyimpan
+                      ? null
+                      : () async {
+                          final nomorHalaman =
+                              int.tryParse(nomor.text.trim()) ?? 0;
+                          final teksHalaman = isi.text.trim();
+                          final urlIlustrasi = ilustrasi.text.trim();
+
+                          if (nomorHalaman < 1) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Nomor halaman minimal 1.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (teksHalaman.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Isi halaman wajib diisi.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          atur(() => menyimpan = true);
+
+                          final data = {
+                            'buku_id': widget.bukuId,
+                            'nomor_halaman': nomorHalaman,
+                            'isi_halaman': teksHalaman,
+                            'ilustrasi':
+                                urlIlustrasi.isEmpty ? null : urlIlustrasi,
+                          };
+
+                          try {
+                            if (item == null) {
+                              await supabase.from('halaman_buku').insert(data);
+                            } else {
+                              final hasil = await supabase
+                                  .from('halaman_buku')
+                                  .update(data)
+                                  .eq('id', item['id'])
+                                  .select('id');
+
+                              if (hasil.isEmpty) {
+                                throw Exception(
+                                  'Halaman tidak terupdate. Kemungkinan policy '
+                                  'UPDATE pada tabel halaman_buku belum dibuat.',
+                                );
+                              }
+                            }
+
+                            if (!mounted) return;
+
+                            Navigator.pop(dialogContext);
+                            await muat();
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Halaman berhasil disimpan.'),
+                              ),
+                            );
+                          } catch (e) {
+                            atur(() => menyimpan = false);
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Gagal menyimpan halaman: '
+                                  '${_pesanGalatDb(e)}',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: GayaAdmin.biru,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: menyimpan
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nomor.dispose();
+    isi.dispose();
+    ilustrasi.dispose();
+  }
+
+  Future<void> hapus(Map<String, dynamic> item) async {
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Halaman'),
+        content: Text('Hapus halaman ${item['nomor_halaman']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (yakin != true) return;
+
+    try {
+      final hasil = await supabase
+          .from('halaman_buku')
+          .delete()
+          .eq('id', item['id'])
+          .select('id');
+
+      if (hasil.isEmpty) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Halaman gagal dihapus: kemungkinan policy DELETE pada tabel '
+              'halaman_buku belum dibuat di Supabase (RLS).',
+            ),
+          ),
+        );
+        return;
+      }
+
+      await muat();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus halaman: ${_pesanGalatDb(e)}'),
+        ),
+      );
+    }
+  }
+
+  Widget _baris(Map<String, dynamic> item) {
+    final nomor = item['nomor_halaman']?.toString() ?? '-';
+    final isi = item['isi_halaman']?.toString() ?? '';
+    final potongan = isi.length > 110 ? '${isi.substring(0, 110)}...' : isi;
+    final adaIlustrasi = (item['ilustrasi']?.toString() ?? '').isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: GayaAdmin.garis),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: GayaAdmin.biruMuda,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              nomor,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: GayaAdmin.biruTua,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  potongan.isEmpty ? '(Halaman kosong)' : potongan,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, height: 1.4),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  adaIlustrasi ? 'Ada ilustrasi' : 'Tanpa ilustrasi',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: adaIlustrasi ? GayaAdmin.hijau : GayaAdmin.teksAbu,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Ubah halaman',
+            onPressed: () => form(item: item),
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            color: GayaAdmin.biruTua,
+            constraints: const BoxConstraints(),
+          ),
+          IconButton(
+            tooltip: 'Hapus halaman',
+            onPressed: () => hapus(item),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            color: GayaAdmin.merah,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Halaman • ${widget.judul}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: GayaAdmin.biruTua,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Tambah halaman',
+            onPressed: () => form(),
+            icon: const Icon(Icons.add_circle_outline),
+            color: GayaAdmin.biru,
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 500,
+        height: 380,
+        child: memuat
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Gagal memuat halaman.\n$error',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      TextButton.icon(
+                        onPressed: muat,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  )
+                : halaman.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Belum ada halaman.\nTambahkan halaman agar anak '
+                          'bisa membaca cerita.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: GayaAdmin.teksAbu,
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        children: halaman.map(_baris).toList(),
+                      ),
+      ),
+      actions: [
+        ElevatedButton.icon(
+          onPressed: () => form(),
+          icon: const Icon(Icons.add, size: 16),
+          label: const Text('Tambah Halaman'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: GayaAdmin.biru,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
         ),
       ],
     );
