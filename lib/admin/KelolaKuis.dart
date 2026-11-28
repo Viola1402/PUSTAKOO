@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,7 +11,7 @@ import 'admin_shell.dart';
 // Tabel yang dipakai:
 // - kuis(id, buku_id, judul)
 // - pertanyaan(id, kuis_id, isi_pertanyaan, jawaban_benar,
-//   jawaban_salah_1, jawaban_salah_2)
+//   jawaban_salah_1, jawaban_salah_2, jawaban_salah_3)
 // - riwayat_kuis(id, nilai, anak_id, kuis_id, waktu_selesai, percobaan_ke)
 // ==========================================================
 
@@ -67,12 +69,13 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     return daftarBuku[indeksBuku];
   }
 
-  /// Urutan pilihan pada layar anak: jawaban benar + dua pengecoh.
+  /// Urutan pilihan pada layar anak: jawaban benar + tiga pengecoh.
   List<String> pilihanSoal(Map<String, dynamic> item) {
     return [
       teks(item['jawaban_benar'], ''),
       teks(item['jawaban_salah_1'], ''),
       teks(item['jawaban_salah_2'], ''),
+      teks(item['jawaban_salah_3'], ''),
     ].where((pilihan) => pilihan.isNotEmpty).toList();
   }
 
@@ -112,8 +115,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
           return {
             'id': item['id'],
             'judul': item['judul'] ?? 'Tanpa Judul',
-            'kategori':
-                petaKategori[item['kategori_id'].toString()] ??
+            'kategori': petaKategori[item['kategori_id'].toString()] ??
                 'Tanpa Kategori',
             'status': teks(item['status'], 'draf'),
             'tingkat_membaca': teks(item['tingkat_membaca'], '-'),
@@ -179,7 +181,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
             .from('pertanyaan')
             .select(
               'id, kuis_id, isi_pertanyaan, jawaban_benar, '
-              'jawaban_salah_1, jawaban_salah_2',
+              'jawaban_salah_1, jawaban_salah_2, jawaban_salah_3',
             )
             .eq('kuis_id', idKuis)
             .order('id');
@@ -235,11 +237,35 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     }
   }
 
+  String _pesanGalatKuis(Object e) {
+    final pesan = e.toString();
+    final kecil = pesan.toLowerCase();
+
+    if (pesan.contains('42501') || kecil.contains('row-level security')) {
+      return 'Akses ditolak oleh RLS Supabase. Pastikan policy INSERT/UPDATE/'
+          'DELETE untuk tabel kuis dan pertanyaan sudah dibuat untuk admin.';
+    }
+
+    if (pesan.contains('23503')) {
+      return 'Kuis untuk buku ini tidak ditemukan di database. Tekan Muat '
+          'Ulang lalu coba lagi.';
+    }
+
+    if (kecil.contains('does not exist')) {
+      return 'Kolom atau tabel tidak ditemukan di database. Periksa skema.';
+    }
+
+    return pesan;
+  }
+
   Future<int?> pastikanKuis() async {
     if (kuisId != null) return kuisId;
 
     final idBuku = bukuTerpilih['id'];
-    if (idBuku == null) return null;
+
+    if (idBuku == null) {
+      throw 'Buku belum dipilih. Pilih buku pada kartu di atas.';
+    }
 
     final judul = 'Kuis ${teks(bukuTerpilih['judul'], '')}';
 
@@ -252,8 +278,9 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
 
       kuisId = angka(hasil['id']);
       return kuisId;
-    } catch (_) {
-      // Bila policy tidak mengizinkan select setelah insert, ambil ulang.
+    } on PostgrestException catch (e) {
+      // Bisa jadi kuis sudah ada (unique buku_id) atau select setelah insert
+      // dibatasi policy; cek dulu apakah kuis untuk buku ini benar-benar ada.
       final hasil = await supabase
           .from('kuis')
           .select('id')
@@ -261,10 +288,12 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
           .order('id')
           .limit(1);
 
-      if (hasil.isEmpty) return null;
+      if (hasil.isNotEmpty) {
+        kuisId = angka(hasil.first['id']);
+        return kuisId;
+      }
 
-      kuisId = angka(hasil.first['id']);
-      return kuisId;
+      throw _pesanGalatKuis(e);
     }
   }
 
@@ -287,12 +316,16 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     final salah2 = TextEditingController(
       text: teks(item?['jawaban_salah_2'], ''),
     );
+    final salah3 = TextEditingController(
+      text: teks(item?['jawaban_salah_3'], ''),
+    );
 
     if (!mounted) {
       isi.dispose();
       benar.dispose();
       salah1.dispose();
       salah2.dispose();
+      salah3.dispose();
       return;
     }
 
@@ -341,9 +374,13 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
                     label: 'Pilihan Pengecoh 2',
                     hint: 'Jawaban salah kedua',
                     controller: salah2,
-                    bantuan:
-                        'Aplikasi anak mengacak 1 jawaban benar + 2 '
-                        'pengecoh ini menjadi pilihan A, B, C.',
+                  ),
+                  KotakIsian(
+                    label: 'Pilihan Pengecoh 3',
+                    hint: 'Jawaban salah ketiga',
+                    controller: salah3,
+                    bantuan: 'Aplikasi anak mengacak 1 jawaban benar + 3 '
+                        'pengecoh ini menjadi pilihan A, B, C, D.',
                   ),
                 ],
               ),
@@ -359,11 +396,12 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
                 if (isi.text.trim().isEmpty ||
                     benar.text.trim().isEmpty ||
                     salah1.text.trim().isEmpty ||
-                    salah2.text.trim().isEmpty) {
+                    salah2.text.trim().isEmpty ||
+                    salah3.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Pertanyaan, jawaban benar, dan dua pengecoh '
+                        'Pertanyaan, jawaban benar, dan tiga pengecoh '
                         'harus diisi.',
                       ),
                     ),
@@ -396,6 +434,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
         benar: benar.text.trim(),
         salah1: salah1.text.trim(),
         salah2: salah2.text.trim(),
+        salah3: salah3.text.trim(),
       );
     }
 
@@ -403,6 +442,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     benar.dispose();
     salah1.dispose();
     salah2.dispose();
+    salah3.dispose();
   }
 
   Future<void> _simpanSoal({
@@ -412,13 +452,14 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     required String benar,
     required String salah1,
     required String salah2,
+    required String salah3,
   }) async {
     setState(() => sedangMenyimpan = true);
 
     try {
       final idKuis = await pastikanKuis();
       if (idKuis == null) {
-        throw 'Pilih buku terlebih dahulu.';
+        throw 'Kuis untuk buku ini belum siap. Tekan Muat Ulang lalu coba lagi.';
       }
 
       final data = {
@@ -427,15 +468,28 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
         'jawaban_benar': benar,
         'jawaban_salah_1': salah1,
         'jawaban_salah_2': salah2,
+        'jawaban_salah_3': salah3,
       };
 
       if (baru) {
-        await supabase.from('pertanyaan').insert(data);
+        final hasil =
+            await supabase.from('pertanyaan').insert(data).select('id');
+
+        if (hasil.isEmpty) {
+          throw 'Pertanyaan tidak tersimpan. Kemungkinan policy INSERT pada '
+              'tabel pertanyaan belum dibuat di Supabase (RLS).';
+        }
       } else {
-        await supabase
+        final hasil = await supabase
             .from('pertanyaan')
             .update(data)
-            .eq('id', item?['id']);
+            .eq('id', item?['id'])
+            .select('id');
+
+        if (hasil.isEmpty) {
+          throw 'Pertanyaan tidak terupdate. Kemungkinan policy UPDATE pada '
+              'tabel pertanyaan belum dibuat di Supabase (RLS).';
+        }
       }
 
       await muatKuis();
@@ -455,7 +509,9 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan pertanyaan: $e')),
+        SnackBar(
+          content: Text('Gagal menyimpan pertanyaan: ${_pesanGalatKuis(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => sedangMenyimpan = false);
@@ -504,7 +560,26 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
     setState(() => sedangMenyimpan = true);
 
     try {
-      await supabase.from('pertanyaan').delete().eq('id', item['id']);
+      final hasil = await supabase
+          .from('pertanyaan')
+          .delete()
+          .eq('id', item['id'])
+          .select('id');
+
+      if (hasil.isEmpty) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Pertanyaan gagal dihapus: kemungkinan policy DELETE pada tabel '
+              'pertanyaan belum dibuat di Supabase (RLS).',
+            ),
+          ),
+        );
+        return;
+      }
+
       await muatKuis();
 
       if (!mounted) return;
@@ -516,7 +591,9 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menghapus pertanyaan: $e')),
+        SnackBar(
+          content: Text('Gagal menghapus pertanyaan: ${_pesanGalatKuis(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => sedangMenyimpan = false);
@@ -582,6 +659,32 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
   }
 
   // --------------------------------------------------------
+  // PRATINJAU KUIS
+  // --------------------------------------------------------
+
+  Future<void> _bukaPratinjau() async {
+    if (soal.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Belum ada pertanyaan untuk dipratinjau. Tambahkan pertanyaan '
+            'terlebih dahulu.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _DialogPratinjauKuis(
+        judul: 'Kuis ${teks(bukuTerpilih['judul'], '')}',
+        soal: List<Map<String, dynamic>>.from(soal),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------
   // BUILD
   // --------------------------------------------------------
 
@@ -641,13 +744,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               teks: 'Pratinjau Kuis',
               ikon: Icons.visibility_outlined,
               utama: false,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pratinjau kuis dibuka pada aplikasi anak.'),
-                  ),
-                );
-              },
+              onPressed: _bukaPratinjau,
             ),
             TombolAdmin(
               teks: 'Muat Ulang',
@@ -863,18 +960,18 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               ),
               const SizedBox(width: 8),
               Icon(
-                daftarPilihan.length == 3
+                daftarPilihan.length == 4
                     ? Icons.check_circle_outline
                     : Icons.error_outline,
                 size: 12,
-                color: daftarPilihan.length == 3
+                color: daftarPilihan.length == 4
                     ? GayaAdmin.teksAbu
                     : GayaAdmin.oranye,
               ),
               const SizedBox(width: 3),
               Text(
-                daftarPilihan.length == 3
-                    ? '3 pilihan jawaban'
+                daftarPilihan.length == 4
+                    ? '4 pilihan jawaban'
                     : 'Pilihan jawaban belum lengkap',
                 style: const TextStyle(
                   fontSize: 9.5,
@@ -884,9 +981,8 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               const Spacer(),
               IconButton(
                 tooltip: 'Ubah pertanyaan',
-                onPressed: sedangMenyimpan
-                    ? null
-                    : () => _dialogSoal(item: item),
+                onPressed:
+                    sedangMenyimpan ? null : () => _dialogSoal(item: item),
                 icon: const Icon(
                   Icons.edit_outlined,
                   size: 16,
@@ -922,9 +1018,8 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
           LayoutBuilder(
             builder: (context, ukuran) {
               final duaKolom = ukuran.maxWidth > 620;
-              final lebar = duaKolom
-                  ? (ukuran.maxWidth - 10) / 2
-                  : ukuran.maxWidth;
+              final lebar =
+                  duaKolom ? (ukuran.maxWidth - 10) / 2 : ukuran.maxWidth;
 
               return Wrap(
                 spacing: 10,
@@ -979,9 +1074,8 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: benar ? FontWeight.w600 : FontWeight.w400,
-                color: benar
-                    ? const Color(0xFF0B7A50)
-                    : const Color(0xFF475569),
+                color:
+                    benar ? const Color(0xFF0B7A50) : const Color(0xFF475569),
                 height: 1.35,
               ),
             ),
@@ -1091,15 +1185,15 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: GayaAdmin.garis),
       ),
-      child: Column(
+      child: const Column(
         children: [
-          const Icon(
+          Icon(
             Icons.quiz_outlined,
             size: 40,
             color: GayaAdmin.teksAbu,
           ),
-          const SizedBox(height: 10),
-          const Text(
+          SizedBox(height: 10),
+          Text(
             'Belum ada pertanyaan untuk buku ini',
             style: TextStyle(
               fontSize: 12.5,
@@ -1107,8 +1201,8 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               color: GayaAdmin.biruTua,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
+          SizedBox(height: 4),
+          Text(
             'Tambahkan pertanyaan pemahaman cerita untuk membuat kuis.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10, color: GayaAdmin.teksAbu),
@@ -1127,15 +1221,15 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: GayaAdmin.garis),
       ),
-      child: Column(
+      child: const Column(
         children: [
-          const Icon(
+          Icon(
             Icons.menu_book_outlined,
             size: 44,
             color: GayaAdmin.teksAbu,
           ),
-          const SizedBox(height: 10),
-          const Text(
+          SizedBox(height: 10),
+          Text(
             'Belum ada buku di database',
             style: TextStyle(
               fontSize: 12.5,
@@ -1143,8 +1237,8 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
               color: GayaAdmin.biruTua,
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
+          SizedBox(height: 4),
+          Text(
             'Tambahkan cerita terlebih dahulu pada halaman Kelola Cerita, '
             'lalu kembali ke sini untuk membuat kuisnya.',
             textAlign: TextAlign.center,
@@ -1214,6 +1308,310 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
           child: const Text(
             'Muat Ulang',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DialogPratinjauKuis extends StatefulWidget {
+  const _DialogPratinjauKuis({required this.judul, required this.soal});
+
+  final String judul;
+  final List<Map<String, dynamic>> soal;
+
+  @override
+  State<_DialogPratinjauKuis> createState() => _DialogPratinjauKuisState();
+}
+
+class _DialogPratinjauKuisState extends State<_DialogPratinjauKuis> {
+  final acak = Random();
+
+  int indeks = 0;
+  int jumlahBenar = 0;
+  bool selesai = false;
+  String? dipilih;
+  List<String> pilihan = [];
+
+  Map<String, dynamic> get soalAktif => widget.soal[indeks];
+
+  String get jawabanBenar =>
+      soalAktif['jawaban_benar']?.toString().trim() ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _acakPilihan();
+  }
+
+  void _acakPilihan() {
+    final semua = [
+      soalAktif['jawaban_benar'],
+      soalAktif['jawaban_salah_1'],
+      soalAktif['jawaban_salah_2'],
+      soalAktif['jawaban_salah_3'],
+    ]
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    semua.shuffle(acak);
+    pilihan = semua;
+    dipilih = null;
+  }
+
+  void _pilihJawaban(String jawaban) {
+    if (dipilih != null) return;
+
+    setState(() {
+      dipilih = jawaban;
+      if (jawaban == jawabanBenar) jumlahBenar++;
+    });
+  }
+
+  void _berikutnya() {
+    if (indeks + 1 >= widget.soal.length) {
+      setState(() => selesai = true);
+      return;
+    }
+
+    setState(() {
+      indeks++;
+      _acakPilihan();
+    });
+  }
+
+  void _ulangi() {
+    setState(() {
+      indeks = 0;
+      jumlahBenar = 0;
+      selesai = false;
+      _acakPilihan();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
+      title: Text(
+        'Pratinjau ${widget.judul}',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: GayaAdmin.biruTua,
+        ),
+      ),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: selesai ? _hasil() : _pertanyaan(),
+        ),
+      ),
+      actions: selesai
+          ? [
+              TextButton(onPressed: _ulangi, child: const Text('Ulangi')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: GayaAdmin.biru,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Tutup'),
+              ),
+            ]
+          : [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup'),
+              ),
+              ElevatedButton(
+                onPressed: dipilih == null ? null : _berikutnya,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: GayaAdmin.biru,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  indeks + 1 >= widget.soal.length
+                      ? 'Lihat Hasil'
+                      : 'Soal Berikutnya',
+                ),
+              ),
+            ],
+    );
+  }
+
+  Widget _pertanyaan() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ChipAdmin(
+              'Soal ${indeks + 1} dari ${widget.soal.length}',
+              warna: GayaAdmin.biruMuda,
+              kecil: true,
+            ),
+            const Spacer(),
+            Text(
+              'Benar: $jumlahBenar',
+              style: const TextStyle(
+                fontSize: 10,
+                color: GayaAdmin.teksAbu,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          soalAktif['isi_pertanyaan']?.toString() ?? 'Pertanyaan belum diisi',
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (var i = 0; i < pilihan.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _opsi(pilihan[i], i),
+          ),
+        if (dipilih != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            dipilih == jawabanBenar
+                ? 'Jawaban benar.'
+                : 'Belum tepat. Jawaban benar: $jawabanBenar',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color:
+                  dipilih == jawabanBenar ? GayaAdmin.hijau : GayaAdmin.merah,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _opsi(String jawaban, int posisi) {
+    final sudahMenjawab = dipilih != null;
+    final iniJawabanBenar = jawaban == jawabanBenar;
+    final iniPilihan = dipilih == jawaban;
+    final huruf = String.fromCharCode(65 + posisi);
+
+    Color warnaTepi = GayaAdmin.garis;
+    Color warnaLatar = const Color(0xFFF8FAFC);
+    Color warnaTeks = const Color(0xFF475569);
+
+    if (sudahMenjawab && iniJawabanBenar) {
+      warnaTepi = const Color(0xFFB7EBD4);
+      warnaLatar = GayaAdmin.hijauMuda;
+      warnaTeks = const Color(0xFF0B7A50);
+    } else if (sudahMenjawab && iniPilihan) {
+      warnaTepi = const Color(0xFFF6C6C6);
+      warnaLatar = GayaAdmin.merahMuda;
+      warnaTeks = GayaAdmin.merah;
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(9),
+      onTap: sudahMenjawab ? null : () => _pilihJawaban(jawaban),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        decoration: BoxDecoration(
+          color: warnaLatar,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: warnaTepi),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: GayaAdmin.garis),
+              ),
+              child: Text(
+                huruf,
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                jawaban,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: sudahMenjawab && iniJawabanBenar
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                  color: warnaTeks,
+                  height: 1.35,
+                ),
+              ),
+            ),
+            if (sudahMenjawab && iniJawabanBenar)
+              const Icon(Icons.check, size: 14, color: GayaAdmin.hijau),
+            if (sudahMenjawab && iniPilihan && !iniJawabanBenar)
+              const Icon(Icons.close, size: 14, color: GayaAdmin.merah),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hasil() {
+    final total = widget.soal.length;
+    final nilai = total == 0 ? 0 : ((jumlahBenar / total) * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pratinjau selesai',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            ChipAdmin(
+              '$jumlahBenar / $total benar',
+              warna: GayaAdmin.hijauMuda,
+              kecil: true,
+              ikon: Icons.check_circle_outline,
+            ),
+            const SizedBox(width: 8),
+            ChipAdmin(
+              'Nilai $nilai',
+              warna: GayaAdmin.biruMuda,
+              kecil: true,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Ini hanya pratinjau admin. Pilihan jawaban diacak seperti pada '
+          'aplikasi anak, dan hasilnya tidak disimpan.',
+          style: TextStyle(
+            fontSize: 10,
+            color: GayaAdmin.teksAbu,
+            height: 1.4,
           ),
         ),
       ],

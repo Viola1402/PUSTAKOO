@@ -34,30 +34,17 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
   static List<Map<String, dynamic>> _contohHargaTukar() {
     return [
       {
-        'judul': 'Dongeng',
-        'kategori': 'Petualangan',
-        'poin': 10,
+        'judul': 'Petualangan',
+        'kategori': 'Dongeng',
+        'poin': 80,
         'aktif': true
       },
-      {
-        'judul': 'Sains',
-        'kategori': 'Cerita Rakyat',
-        'poin': 20,
-        'aktif': true
-      },
+      {'judul': 'Sains', 'kategori': 'Pengetahuan', 'poin': 120, 'aktif': true},
       {
         'judul': 'Cerita Rakyat',
         'kategori': 'Gratis / 35 Poin',
         'poin': 35,
-        'aktif': true,
-      },
-      {'judul': 'Hewan', 'kategori': 'Dongeng', 'poin': 50, 'aktif': true},
-      {'judul': 'Dongeng', 'kategori': 'Dongeng', 'poin': 100, 'aktif': true},
-      {
-        'judul': 'Audio',
-        'kategori': 'Audio (+Poin)',
-        'poin': 450,
-        'aktif': true,
+        'aktif': true
       },
     ];
   }
@@ -145,7 +132,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
 
       setState(() {
         if (hasilBuku.isNotEmpty) {
-          hargaTukar = hasilBuku.take(6).map((item) {
+          hargaTukar = hasilBuku.take(3).map((item) {
             return <String, dynamic>{
               'id': item['id'],
               'judul': item['judul'] ?? 'Tanpa Judul',
@@ -226,7 +213,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
         title: Text(
           item == null ? 'Penukaran Buku Baru' : 'Ubah Harga Tukar',
           style: const TextStyle(
-            fontSize: 17,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: GayaAdmin.biruTua,
           ),
@@ -322,7 +309,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
               title: Text(
                 item == null ? 'Tambah Misi Baru' : 'Ubah Misi',
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: GayaAdmin.biruTua,
                 ),
@@ -356,12 +343,12 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                       const Text(
                         'Jenis Misi',
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: GayaAdmin.biruTua,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           _pilihanJenis(
@@ -451,7 +438,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(7),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
           color: aktif ? GayaAdmin.biru : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(7),
@@ -459,7 +446,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
         child: Text(
           teks,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12.5,
             fontWeight: FontWeight.bold,
             color: aktif ? Colors.white : GayaAdmin.teks,
           ),
@@ -478,42 +465,21 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
       aktif: 'Kelola Misi & Poin',
       child: LayoutBuilder(
         builder: (context, ukuran) {
-          final lebar = ukuran.maxWidth;
-
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+            padding: const EdgeInsets.fromLTRB(26, 20, 26, 36),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const RemahAdmin(['Dashboard', 'Kelola Misi & Poin']),
                 _judulHalaman(),
-                const SizedBox(height: 14),
-                if (sedangMemuat)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (lebar > 1100)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: _kartuAturanPoin()),
-                      const SizedBox(width: 12),
-                      Expanded(flex: 3, child: _kartuHargaTukar()),
-                      const SizedBox(width: 12),
-                      Expanded(flex: 3, child: _kartuMisi()),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      _kartuAturanPoin(),
-                      const SizedBox(height: 12),
-                      _kartuHargaTukar(),
-                      const SizedBox(height: 12),
-                      _kartuMisi(),
-                    ],
-                  ),
+                const SizedBox(height: 24),
+
+                // Susunan dibuat vertikal agar sama seperti referensi:
+                // Aturan Poin -> Misi Membaca -> Harga Tukar Cerita.
+                _kartuAturanPoin(),
+                const SizedBox(height: 26),
+                _kartuMisi(),
+                const SizedBox(height: 26),
+                _kartuHargaTukar(),
               ],
             ),
           );
@@ -555,8 +521,9 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
             const Text(
               'Kelola Misi & Poin',
               style: TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.bold,
+                fontSize: 34,
+                height: 1.08,
+                fontWeight: FontWeight.w800,
                 color: GayaAdmin.biruTua,
               ),
             ),
@@ -565,7 +532,8 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
               'Konfigurasi sistem gamifikasi: perolehan poin baca, katalog '
               'harga penukaran buku, dan misi harian anak.',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 14.5,
+                height: 1.35,
                 color: GayaAdmin.teksAbu,
               ),
             ),
@@ -601,18 +569,29 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
 
   Widget _kartuAturanPoin() {
     return KartuAdmin(
-      warna: GayaAdmin.krem,
-      padding: const EdgeInsets.all(14),
+      warna: const Color(0xFF80C5ED),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const JudulBagian(
+          const Text(
+            'Aturan Poin',
+            style: TextStyle(
+                fontSize: 30,
+                height: 1.1,
+                fontWeight: FontWeight.w800,
+                color: GayaAdmin.biruTua),
+          ),
+          const SizedBox(height: 4),
+          const Text('Parameter koin yang diperoleh anak',
+              style: TextStyle(fontSize: 14.5, color: GayaAdmin.biruTua)),
+          /* const JudulBagian(
             ikon: Icons.adjust,
             judul: 'Aturan Poin',
             subjudul: 'Parameter poin yang diperoleh anak',
             warnaIkon: Colors.white,
-          ),
-          const SizedBox(height: 14),
+          ), */
+          const SizedBox(height: 22),
           KotakIsian(
             label: 'Poin Selesai Membaca',
             bantuan: 'Per buku tamat',
@@ -642,10 +621,10 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
             akhiran: 'Poin / hari',
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(9),
               border: Border.all(color: const Color(0xFFE7DCC2)),
             ),
             child: Row(
@@ -657,16 +636,16 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                       Text(
                         'Weekend Boost (2x Poin)',
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: GayaAdmin.biruTua,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      SizedBox(height: 3),
                       Text(
                         'Otomatis aktif Sabtu & Minggu',
                         style: TextStyle(
-                          fontSize: 8.5,
+                          fontSize: 12,
                           color: GayaAdmin.teksAbu,
                         ),
                       ),
@@ -674,7 +653,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                   ),
                 ),
                 Transform.scale(
-                  scale: 0.8,
+                  scale: 0.85,
                   child: Switch(
                     value: weekendBoost,
                     activeColor: Colors.white,
@@ -687,7 +666,7 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: TombolAdmin(
@@ -702,15 +681,15 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
             children: [
               Icon(
                 Icons.access_time,
-                size: 11,
-                color: GayaAdmin.teksAbu,
+                size: 14,
+                color: GayaAdmin.biruTua,
               ),
-              SizedBox(width: 4),
+              SizedBox(width: 6),
               Text(
                 'Terakhir diperbarui: Hari ini, 09.30 WIB',
                 style: TextStyle(
-                  fontSize: 8.5,
-                  color: GayaAdmin.teksAbu,
+                  fontSize: 11.5,
+                  color: GayaAdmin.biruTua,
                 ),
               ),
             ],
@@ -750,45 +729,57 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
     final daftar = daftarHargaTampil;
 
     return KartuAdmin(
-      padding: const EdgeInsets.all(14),
+      warna: const Color(0xFFF2A6A8),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const JudulBagian(
+          const Text(
+            'Harga Tukar Cerita',
+            style: TextStyle(
+                fontSize: 30,
+                height: 1.1,
+                fontWeight: FontWeight.w800,
+                color: GayaAdmin.biruTua),
+          ),
+          const SizedBox(height: 4),
+          const Text('Biaya koin emas untuk akses buku baru',
+              style: TextStyle(fontSize: 14.5, color: GayaAdmin.biruTua)),
+          /* const JudulBagian(
             ikon: Icons.shopping_bag_outlined,
             judul: 'Harga Tukar Cerita',
             subjudul: 'Biaya poin untuk membuka akses buku baru',
-          ),
-          const SizedBox(height: 12),
+          ), */
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  height: 34,
+                  height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: GayaAdmin.latar,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(9),
                     border: Border.all(color: GayaAdmin.garis),
                   ),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.search,
-                        size: 15,
+                        size: 18,
                         color: GayaAdmin.teksAbu,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
                           onChanged: (value) {
                             setState(() => cariBuku = value);
                           },
-                          style: const TextStyle(fontSize: 11),
+                          style: const TextStyle(fontSize: 13.5),
                           decoration: const InputDecoration(
                             hintText: 'Cari judul cerita...',
                             hintStyle: TextStyle(
-                              fontSize: 10,
+                              fontSize: 13,
                               color: GayaAdmin.teksAbu,
                             ),
                             border: InputBorder.none,
@@ -800,30 +791,38 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Container(
-                width: 34,
-                height: 34,
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: GayaAdmin.latar,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(9),
                   border: Border.all(color: GayaAdmin.garis),
                 ),
-                child: const Icon(
-                  Icons.filter_alt_outlined,
-                  size: 15,
-                  color: GayaAdmin.teksAbu,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.filter_alt_outlined,
+                        size: 16, color: GayaAdmin.biruTua),
+                    SizedBox(width: 7),
+                    Text('Filter',
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: GayaAdmin.biruTua)),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           for (var i = 0; i < daftar.length; i++)
             Padding(
-              padding: const EdgeInsets.only(bottom: 7),
+              padding: const EdgeInsets.only(bottom: 9),
               child: _barisHarga(daftar[i], hargaTukar.indexOf(daftar[i])),
             ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
             child: TombolAdmin(
@@ -840,29 +839,29 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
 
   Widget _barisHarga(Map<String, dynamic> item, int indeks) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFCFE),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: GayaAdmin.garis),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE8D3D7)),
       ),
       child: Row(
         children: [
           Container(
-            width: 28,
-            height: 32,
+            width: 38,
+            height: 42,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: const Color(0xFFE5F1FB),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.menu_book,
-              size: 15,
+              size: 20,
               color: GayaAdmin.biru,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -872,25 +871,25 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: GayaAdmin.biruTua,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   teks(item['kategori'], '-'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 8.5,
+                    fontSize: 12,
                     color: GayaAdmin.teksAbu,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
           ChipAdmin(
             '${item['poin']} Poin',
             warna: GayaAdmin.oranyeMuda,
@@ -898,10 +897,10 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
             kecil: true,
           ),
           SizedBox(
-            height: 24,
-            width: 32,
+            height: 30,
+            width: 44,
             child: Transform.scale(
-              scale: 0.68,
+              scale: 0.82,
               child: Switch(
                 value: item['aktif'] == true,
                 activeColor: Colors.white,
@@ -914,12 +913,13 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
           ),
           InkWell(
             onTap: () => _dialogHarga(item: item, indeks: indeks),
+            borderRadius: BorderRadius.circular(6),
             child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 3),
+              padding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
               child: Text(
                 'Ubah',
                 style: TextStyle(
-                  fontSize: 8.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.bold,
                   color: GayaAdmin.biru,
                 ),
@@ -937,29 +937,96 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
 
   Widget _kartuMisi() {
     return KartuAdmin(
-      padding: const EdgeInsets.all(14),
+      warna: const Color(0xFFF4E9CF),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const JudulBagian(
-            ikon: Icons.emoji_events_outlined,
-            judul: 'Misi Membaca',
-            subjudul: 'Tantangan literasi berulang',
-          ),
-          const SizedBox(height: 12),
-          _tabMisi(),
-          const SizedBox(height: 10),
-          for (final item in misiAktif)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _kartuItemMisi(item),
+          const Text(
+            'Misi Membaca',
+            style: TextStyle(
+              fontSize: 30,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+              color: GayaAdmin.biruTua,
             ),
-          const SizedBox(height: 3),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tantangan literasi berkelanjutan anak',
+            style: TextStyle(fontSize: 14.5, color: GayaAdmin.biruTua),
+          ),
+          const SizedBox(height: 22),
+          LayoutBuilder(
+            builder: (context, ukuran) {
+              final duaKolom = ukuran.maxWidth >= 620;
+              if (!duaKolom) {
+                return Column(
+                  children: [
+                    _labelTabMisi('Misi Harian (${misiHarian.length})'),
+                    const SizedBox(height: 10),
+                    for (final item in misiHarian)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _kartuItemMisi(item),
+                      ),
+                    const SizedBox(height: 8),
+                    _labelTabMisi('Misi Mingguan (${misiMingguan.length})'),
+                    const SizedBox(height: 10),
+                    for (final item in misiMingguan)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _kartuItemMisi(item),
+                      ),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _labelTabMisi('Misi Harian (${misiHarian.length})'),
+                            const SizedBox(height: 12),
+                            for (final item in misiHarian)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _kartuItemMisi(item),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _labelTabMisi(
+                                'Misi Mingguan (${misiMingguan.length})'),
+                            const SizedBox(height: 12),
+                            for (final item in misiMingguan)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _kartuItemMisi(item),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: TombolAdmin(
-              teks: 'Tambah Template Misi Baru',
-              ikon: Icons.add,
+              teks: 'Buat Template Misi Baru',
+              ikon: Icons.add_task,
               utama: false,
               onPressed: () => _dialogMisi(),
             ),
@@ -969,62 +1036,36 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
     );
   }
 
-  Widget _tabMisi() {
-    final tab = [
-      'Misi Harian (${misiHarian.length})',
-      'Misi Mingguan (${misiMingguan.length})',
-    ];
-
+  Widget _labelTabMisi(String teksLabel) {
     return Container(
-      padding: const EdgeInsets.all(3),
+      width: double.infinity,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       decoration: BoxDecoration(
-        color: GayaAdmin.latar,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: GayaAdmin.garis),
+        border: Border.all(color: const Color(0xFFE7EAF2)),
       ),
-      child: Row(
-        children: [
-          for (var i = 0; i < tab.length; i++)
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(7),
-                onTap: () => setState(() => tabMisi = i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: tabMisi == i ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color:
-                          tabMisi == i ? GayaAdmin.garis : Colors.transparent,
-                    ),
-                  ),
-                  child: Text(
-                    tab[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          tabMisi == i ? GayaAdmin.biruTua : GayaAdmin.teksAbu,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
+      child: Text(
+        teksLabel,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: GayaAdmin.biruTua,
+        ),
       ),
     );
   }
 
   Widget _kartuItemMisi(Map<String, dynamic> item) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: GayaAdmin.kremMuda,
+        color: const Color(0xFFF1EFF0),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFEFE4CB)),
+        border: Border.all(color: const Color(0xFFECE7DC)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1032,78 +1073,86 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
           Row(
             children: [
               Container(
-                width: 20,
-                height: 20,
+                width: 24,
+                height: 24,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.lightbulb_outline,
-                  size: 11,
+                  size: 14,
                   color: GayaAdmin.oranye,
                 ),
               ),
-              const SizedBox(width: 6),
-              Flexible(
+              const SizedBox(width: 8),
+              Expanded(
                 child: Text(
                   teks(item['label'], 'HARIAN'),
                   style: const TextStyle(
-                    fontSize: 8,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: GayaAdmin.oranye,
-                    letterSpacing: 0.4,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Ubah misi',
-                onPressed: () => _dialogMisi(item: item),
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  size: 13,
-                  color: GayaAdmin.teksAbu,
-                ),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(3),
-              ),
               SizedBox(
-                height: 20,
                 width: 30,
+                height: 30,
+                child: IconButton(
+                  tooltip: 'Ubah misi',
+                  onPressed: () => _dialogMisi(item: item),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 17,
+                    color: GayaAdmin.teksAbu,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 46,
+                height: 32,
                 child: Transform.scale(
-                  scale: 0.6,
+                  scale: 0.85,
                   child: Switch(
                     value: item['aktif'] == true,
                     activeColor: Colors.white,
                     activeTrackColor: GayaAdmin.hijau,
+                    inactiveThumbColor: Colors.white,
                     onChanged: (value) {
-                      setState(() => item['aktif'] = value);
+                      setState(() {
+                        item['aktif'] = value;
+                      });
                     },
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             teks(item['judul'], 'Misi Baru'),
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 14.5,
               fontWeight: FontWeight.bold,
               color: GayaAdmin.biruTua,
               height: 1.3,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Text(
             teks(item['target'], 'Target: belum diatur'),
             style: const TextStyle(
-              fontSize: 8.5,
+              fontSize: 12.5,
               color: GayaAdmin.teksAbu,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 10),
           Row(
             children: [
               ChipAdmin(
@@ -1112,14 +1161,14 @@ class _KelolaMisiPoinPageState extends State<KelolaMisiPoinPage> {
                 teksWarna: GayaAdmin.oranye,
                 kecil: true,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   '${item['selesai']} ${teks(item['satuan'], 'anak selesai')}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 8,
+                    fontSize: 11.5,
                     color: GayaAdmin.teksAbu,
                   ),
                 ),
