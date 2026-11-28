@@ -37,6 +37,7 @@ dependencies:
   supabase_flutter: ^2.15.4
   flutter_launcher_icons: ^0.14.4
   file_picker: ^8.3.7
+  pdf: ^3.11.3
 
 dev_dependencies:
   flutter_test:

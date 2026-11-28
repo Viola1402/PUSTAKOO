@@ -15,7 +15,6 @@ import 'admin_shell.dart';
 // - riwayat_kuis(id, nilai, anak_id, kuis_id, waktu_selesai, percobaan_ke)
 // ==========================================================
 
-
 class KelolaKuisPage extends StatefulWidget {
   const KelolaKuisPage({super.key});
 
@@ -630,9 +629,13 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
                   itemCount: daftarBuku.length,
                   itemBuilder: (context, i) {
                     return ListTile(
-                      leading: const Icon(
-                        Icons.menu_book,
-                        color: GayaAdmin.biru,
+                      leading: SampulCerita(
+                        sumber: teks(daftarBuku[i]['sampul'], ''),
+                        lebar: 30,
+                        tinggi: 40,
+                        radius: BorderRadius.circular(4),
+                        warnaIkon: GayaAdmin.biru,
+                        ikon: Icons.menu_book,
                       ),
                       title: Text(
                         teks(daftarBuku[i]['judul'], 'Tanpa Judul'),
@@ -872,8 +875,7 @@ class _KelolaKuisPageState extends State<KelolaKuisPage> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${teks(buku['kategori'], 'Tanpa Kategori')} • '
-                      '${teks(buku['tingkat_membaca'], '-')}',
+                      teks(buku['kategori'], 'Tanpa Kategori'),
                       style: const TextStyle(
                         fontSize: 9.5,
                         color: GayaAdmin.teksAbu,
