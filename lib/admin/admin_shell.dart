@@ -129,9 +129,12 @@ class AdminShell extends StatelessWidget {
         if (!desktop) {
           return Scaffold(
             backgroundColor: GayaAdmin.latar,
-            drawer: Drawer(child: _sidebar(context)),
+            drawer: Drawer(
+              width: 280,
+              child: _sidebar(context),
+            ),
             appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(62),
+              preferredSize: const Size.fromHeight(72),
               child: _topbar(context, false),
             ),
             body: child,
@@ -144,7 +147,7 @@ class AdminShell extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: 232,
+                width: 260,
                 child: _sidebar(context),
               ),
               Expanded(
@@ -171,28 +174,37 @@ class AdminShell extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: GayaAdmin.garis)),
+        border: Border(
+          bottom: BorderSide(color: GayaAdmin.garis),
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 22,
+        vertical: 14,
+      ),
       child: Row(
         children: [
           if (!desktop) ...[
             Builder(
               builder: (context) => IconButton(
                 onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: const Icon(Icons.menu, color: GayaAdmin.biruTua),
+                icon: const Icon(
+                  Icons.menu,
+                  color: GayaAdmin.biruTua,
+                  size: 26,
+                ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
           ],
           Expanded(
             child: Row(
               children: [
                 Flexible(
                   child: Container(
-                    height: 40,
-                    constraints: const BoxConstraints(maxWidth: 360),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    height: 48,
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: GayaAdmin.latar,
                       borderRadius: BorderRadius.circular(10),
@@ -200,34 +212,40 @@ class AdminShell extends StatelessWidget {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.search, size: 18, color: GayaAdmin.teksAbu),
-                        SizedBox(width: 8),
+                        Icon(
+                          Icons.search,
+                          size: 21,
+                          color: GayaAdmin.teksAbu,
+                        ),
+                        SizedBox(width: 10),
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
                               hintText: 'Cari cerita, pengguna, kuis...',
                               hintStyle: TextStyle(
                                 color: GayaAdmin.teksAbu,
-                                fontSize: 12,
+                                fontSize: 14,
                               ),
                               border: InputBorder.none,
                               isDense: true,
                             ),
-                            style: TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 14),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 SizedBox(
-                  height: 40,
+                  height: 48,
                   child: ElevatedButton(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Pencarian global belum tersedia.'),
+                          content: Text(
+                            'Pencarian global belum tersedia.',
+                          ),
                         ),
                       );
                     },
@@ -235,12 +253,14 @@ class AdminShell extends StatelessWidget {
                       backgroundColor: GayaAdmin.biruTua,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(9),
                       ),
                       textStyle: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -250,27 +270,47 @@ class AdminShell extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          IconButton(
-            tooltip: 'Notifikasi',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Belum ada notifikasi baru.')),
-              );
-            },
-            icon: const Icon(
-              Icons.notifications_none,
-              color: GayaAdmin.teks,
-            ),
+          const SizedBox(width: 14),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: 'Notifikasi',
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Belum ada notifikasi baru.'),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.notifications_none,
+                  color: GayaAdmin.teks,
+                  size: 27,
+                ),
+              ),
+              Positioned(
+                right: 9,
+                top: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: GayaAdmin.merah,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           if (desktop) ...[
             const CircleAvatar(
-              radius: 17,
+              radius: 20,
               backgroundColor: GayaAdmin.biru,
               backgroundImage: AssetImage('assets/images/piko.png'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 11),
             const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,24 +318,25 @@ class AdminShell extends StatelessWidget {
                 Text(
                   'Admin Pustakoo',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0F172A),
                   ),
                 ),
+                SizedBox(height: 2),
                 Text(
                   'Super Admin',
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     color: GayaAdmin.teksAbu,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
           ] else
             const CircleAvatar(
-              radius: 16,
+              radius: 19,
               backgroundColor: GayaAdmin.biru,
               backgroundImage: AssetImage('assets/images/piko.png'),
             ),
@@ -304,25 +345,29 @@ class AdminShell extends StatelessWidget {
     );
   }
 
+  // --------------------------------------------------------
+  // MEREK SIDEBAR
+  // --------------------------------------------------------
+
   Widget _merekSidebar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 14, 18),
+      padding: const EdgeInsets.fromLTRB(20, 22, 18, 28),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 52,
+            height: 52,
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(13),
             ),
             child: Image.asset(
               'assets/images/piko.png',
               fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 13),
           const Flexible(
             child: Text(
               'Pustakoo',
@@ -330,7 +375,7 @@ class AdminShell extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: GayaAdmin.biruTua,
-                fontSize: 26,
+                fontSize: 30,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.6,
               ),
@@ -360,26 +405,33 @@ class AdminShell extends StatelessWidget {
               aktif: item.judul == aktif,
             ),
           const Spacer(),
-          Divider(color: GayaAdmin.garis, height: 1),
+          Divider(
+            color: GayaAdmin.garis,
+            height: 1,
+            thickness: 1,
+          ),
           ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            dense: false,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 5,
+            ),
             leading: const Icon(
               Icons.logout,
               color: Colors.red,
-              size: 18,
+              size: 22,
             ),
             title: const Text(
               'Keluar',
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
             onTap: () => _keluar(context),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
         ],
       ),
     );
@@ -392,34 +444,36 @@ class AdminShell extends StatelessWidget {
     bool aktif = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 4,
+      ),
       child: Material(
-        color: aktif ? const Color(0xFFDCE9F7) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        color: aktif ? GayaAdmin.biru : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           onTap: () => _pilihMenu(context, judul),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 9,
+              horizontal: 13,
+              vertical: 13,
             ),
             child: Row(
               children: [
                 Icon(
                   icon,
-                  size: 17,
-                  color: aktif ? GayaAdmin.biru : GayaAdmin.biruTua,
+                  size: 21,
+                  color: aktif ? Colors.white : GayaAdmin.teks,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 13),
                 Expanded(
                   child: Text(
                     judul,
                     style: TextStyle(
-                      color: aktif ? GayaAdmin.biru : GayaAdmin.biruTua,
-                      fontSize: 11.5,
-                      fontWeight:
-                          aktif ? FontWeight.bold : FontWeight.w600,
+                      color: aktif ? Colors.white : GayaAdmin.teks,
+                      fontSize: 14,
+                      fontWeight: aktif ? FontWeight.bold : FontWeight.w600,
                     ),
                   ),
                 ),
@@ -477,7 +531,7 @@ class KartuAdmin extends StatelessWidget {
     super.key,
     required this.child,
     this.warna,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(18),
     this.radius,
   });
 
@@ -488,7 +542,7 @@ class KartuAdmin extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: warna ?? Colors.white,
-        borderRadius: radius ?? BorderRadius.circular(13),
+        borderRadius: radius ?? BorderRadius.circular(14),
         border: Border.all(color: GayaAdmin.garis),
         boxShadow: [
           BoxShadow(
@@ -526,8 +580,8 @@ class ChipAdmin extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: kecil ? 7 : 9,
-        vertical: kecil ? 2.5 : 4,
+        horizontal: kecil ? 9 : 11,
+        vertical: kecil ? 4 : 6,
       ),
       decoration: BoxDecoration(
         color: latar,
@@ -537,13 +591,17 @@ class ChipAdmin extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (ikon != null) ...[
-            Icon(ikon, size: kecil ? 8 : 10, color: depan),
-            const SizedBox(width: 4),
+            Icon(
+              ikon,
+              size: kecil ? 11 : 13,
+              color: depan,
+            ),
+            const SizedBox(width: 5),
           ],
           Text(
             teks,
             style: TextStyle(
-              fontSize: kecil ? 8.5 : 10,
+              fontSize: kecil ? 10 : 12,
               fontWeight: FontWeight.w700,
               color: depan,
             ),
@@ -570,7 +628,7 @@ class RemahAdmin extends StatelessWidget {
         Text(
           jejak[i],
           style: TextStyle(
-            fontSize: 9.5,
+            fontSize: 12,
             fontWeight: akhir ? FontWeight.bold : FontWeight.w500,
             color: akhir ? GayaAdmin.biruTua : GayaAdmin.teksAbu,
           ),
@@ -580,10 +638,10 @@ class RemahAdmin extends StatelessWidget {
       if (!akhir) {
         anak.add(
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
+            padding: EdgeInsets.symmetric(horizontal: 5),
             child: Icon(
               Icons.chevron_right,
-              size: 12,
+              size: 16,
               color: GayaAdmin.teksAbu,
             ),
           ),
@@ -592,7 +650,7 @@ class RemahAdmin extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: anak,
@@ -623,15 +681,19 @@ class JudulBagian extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: warnaIkon ?? GayaAdmin.biruMuda,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(ikon, size: 16, color: GayaAdmin.biruTua),
+          child: Icon(
+            ikon,
+            size: 21,
+            color: GayaAdmin.biruTua,
+          ),
         ),
-        const SizedBox(width: 9),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,19 +701,19 @@ class JudulBagian extends StatelessWidget {
               Text(
                 judul,
                 style: const TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: GayaAdmin.biruTua,
                 ),
               ),
               if (subjudul != null) ...[
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   subjudul!,
                   style: const TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     color: GayaAdmin.teksAbu,
-                    height: 1.35,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -659,7 +721,7 @@ class JudulBagian extends StatelessWidget {
           ),
         ),
         if (kanan != null) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           kanan!,
         ],
       ],
@@ -685,23 +747,26 @@ class TombolAdmin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gayaTeks = const TextStyle(
-      fontSize: 10.5,
+    const gayaTeks = TextStyle(
+      fontSize: 13,
       fontWeight: FontWeight.bold,
     );
 
     if (!utama) {
       return OutlinedButton.icon(
         onPressed: onPressed,
-        icon: ikon == null ? const SizedBox.shrink() : Icon(ikon, size: 14),
+        icon: ikon == null ? const SizedBox.shrink() : Icon(ikon, size: 18),
         label: Text(teks),
         style: OutlinedButton.styleFrom(
           foregroundColor: GayaAdmin.biruTua,
           backgroundColor: Colors.white,
           side: const BorderSide(color: GayaAdmin.garis),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(9),
           ),
           textStyle: gayaTeks,
         ),
@@ -710,15 +775,18 @@ class TombolAdmin extends StatelessWidget {
 
     return ElevatedButton.icon(
       onPressed: onPressed,
-      icon: ikon == null ? const SizedBox.shrink() : Icon(ikon, size: 15),
+      icon: ikon == null ? const SizedBox.shrink() : Icon(ikon, size: 19),
       label: Text(teks),
       style: ElevatedButton.styleFrom(
         backgroundColor: warna ?? GayaAdmin.biruTua,
         foregroundColor: Colors.white,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 17,
+          vertical: 14,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(9),
         ),
         textStyle: gayaTeks,
       ),
@@ -753,7 +821,7 @@ class KotakIsian extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 13),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -764,7 +832,7 @@ class KotakIsian extends StatelessWidget {
                 child: Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: GayaAdmin.biruTua,
                   ),
@@ -776,19 +844,19 @@ class KotakIsian extends StatelessWidget {
                     bantuan!,
                     textAlign: TextAlign.right,
                     style: const TextStyle(
-                      fontSize: 8,
+                      fontSize: 10,
                       color: GayaAdmin.teksAbu,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 7),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(9),
               border: Border.all(color: GayaAdmin.garis),
             ),
             child: Row(
@@ -799,20 +867,21 @@ class KotakIsian extends StatelessWidget {
                     keyboardType: keyboard,
                     maxLines: maxLines,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: GayaAdmin.teks,
                     ),
                     decoration: InputDecoration(
                       hintText: hint,
                       hintStyle: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         color: GayaAdmin.teksAbu,
                       ),
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -820,7 +889,7 @@ class KotakIsian extends StatelessWidget {
                   Text(
                     akhiran!,
                     style: const TextStyle(
-                      fontSize: 9,
+                      fontSize: 11,
                       color: GayaAdmin.teksAbu,
                     ),
                   ),
@@ -832,4 +901,3 @@ class KotakIsian extends StatelessWidget {
     );
   }
 }
-
