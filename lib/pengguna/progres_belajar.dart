@@ -1,4 +1,6 @@
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -75,7 +77,7 @@ class _ProgresBelajarState extends State<ProgresBelajar> {
       if (idBuku.isNotEmpty) {
         final buku = await _supabase
             .from('buku')
-            .select('id, judul, kategori(nama)')
+            .select('id, judul, gambar_sampul, kategori(nama)')
             .inFilter('id', idBuku)
             .order('judul');
 
@@ -200,6 +202,50 @@ class _ProgresBelajarState extends State<ProgresBelajar> {
     );
   }
 
+  // GAMBAR SAMPUL BUKU
+  Widget _gambarBuku(BukuSelesai b, int urutan) {
+    final gambar = b.gambarSampul;
+
+    Widget gambarPengganti() {
+      return Container(
+        width: 52,
+        height: 68,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _warnaBuku[urutan % _warnaBuku.length],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          b.hurufAwal,
+          style: gaya(18),
+        ),
+      );
+    }
+
+    if (gambar == null || gambar.isEmpty) {
+      return gambarPengganti();
+    }
+
+    try {
+      final dataGambar = base64Decode(gambar.split(',').last);
+
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.memory(
+          dataGambar,
+          width: 52,
+          height: 68,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return gambarPengganti();
+          },
+        ),
+      );
+    } catch (e) {
+      return gambarPengganti();
+    }
+  }
+
   // KARTU BUKU SELESAI
   Widget _kartuBuku(BukuSelesai b, int urutan) {
     return Container(
@@ -214,19 +260,7 @@ class _ProgresBelajarState extends State<ProgresBelajar> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _warnaBuku[urutan % _warnaBuku.length],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              b.hurufAwal,
-              style: gaya(18),
-            ),
-          ),
+          _gambarBuku(b, urutan),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
