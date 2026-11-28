@@ -1088,7 +1088,7 @@ class _LaporanPageState extends State<LaporanPage> {
                 ),
               ),
             ],
-          ),
+          ), 
           const SizedBox(height: 8),
           SizedBox(
             height: 78,
